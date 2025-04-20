@@ -16,7 +16,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileNote = document.querySelector('.file-note');
     const uploadArea = document.querySelector('.upload-area');
     const retryButton = document.getElementById('retry-button');
-    const previewContainer = document.getElementById('preview-container');
     const previewContent = document.getElementById('preview-content');
 
     // Cost constants for gpt-4.1-mini (per 1M tokens)
@@ -121,25 +120,77 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function removeFile(fileName) {
-        const newFiles = new DataTransfer();
+        // Find the preview item to animate
+        const itemToRemove = Array.from(previewContent.querySelectorAll('.preview-item')).find(
+            item => item.querySelector('.remove-item').getAttribute('data-filename') === fileName
+        );
         
-        // Add all files except the one to remove
-        for (let i = 0; i < selectedFiles.files.length; i++) {
-            const file = selectedFiles.files[i];
-            if (file.name !== fileName) {
-                newFiles.items.add(file);
+        // Get the current file count for immediate UI feedback
+        const currentCount = selectedFiles.files.length;
+        const newCount = currentCount - 1;
+        
+        // Update file count immediately for responsive UI
+        if (newCount > 0) {
+            if (newCount <= 3) {
+                // Will be updated with actual names in the full refresh
+                const tempNames = Array.from(selectedFiles.files)
+                    .filter(file => file.name !== fileName)
+                    .map(file => file.name)
+                    .join(', ');
+                fileNote.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-color);"></i> ${tempNames}`;
+            } else {
+                fileNote.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-color);"></i> ${newCount} files selected`;
             }
         }
         
-        // Update our file list
-        selectedFiles = newFiles;
-        fileInput.files = selectedFiles.files;
-        
-        // Update UI
-        updateFileInputUI();
-        
-        // Regenerate previews
-        generatePreviews();
+        if (itemToRemove) {
+            // Apply the removal animation
+            itemToRemove.classList.add('removing');
+            
+            // Wait for animation to complete before removing from DOM
+            setTimeout(() => {
+                const newFiles = new DataTransfer();
+                
+                // Add all files except the one to remove
+                for (let i = 0; i < selectedFiles.files.length; i++) {
+                    const file = selectedFiles.files[i];
+                    if (file.name !== fileName) {
+                        newFiles.items.add(file);
+                    }
+                }
+                
+                // Update our file list
+                selectedFiles = newFiles;
+                fileInput.files = selectedFiles.files;
+                
+                // Update UI
+                updateFileInputUI();
+                
+                // Regenerate previews with animation
+                generatePreviewsWithAnimation();
+            }, 300); // Match this to the CSS animation duration
+        } else {
+            // Fallback if preview item not found
+            const newFiles = new DataTransfer();
+            
+            // Add all files except the one to remove
+            for (let i = 0; i < selectedFiles.files.length; i++) {
+                const file = selectedFiles.files[i];
+                if (file.name !== fileName) {
+                    newFiles.items.add(file);
+                }
+            }
+            
+            // Update our file list
+            selectedFiles = newFiles;
+            fileInput.files = selectedFiles.files;
+            
+            // Update UI
+            updateFileInputUI();
+            
+            // Regenerate previews
+            generatePreviews();
+        }
     }
     
     function validateFiles(files) {
@@ -208,19 +259,32 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     }
     
-    function generatePreviews() {
+    function generatePreviewsWithAnimation() {
         // Clear current previews
         clearPreview();
         
         if (selectedFiles.files.length === 0) {
-            previewContainer.style.display = 'none';
+            uploadArea.classList.remove('has-files');
+            uploadArea.classList.remove('has-video');
             return;
         }
         
-        // Display preview container
-        previewContainer.style.display = 'block';
+        // Add has-files class to show we have files
+        uploadArea.classList.add('has-files');
         
-        // Generate preview for each file
+        // Check if we have a video or images
+        const hasVideo = Array.from(selectedFiles.files).some(file => file.type.startsWith('video/'));
+        
+        // Add single-video class if we have a video
+        if (hasVideo) {
+            previewContent.classList.add('single-video');
+            uploadArea.classList.add('has-video');
+        } else {
+            previewContent.classList.remove('single-video');
+            uploadArea.classList.remove('has-video');
+        }
+        
+        // Generate preview for each file with animation
         for (let i = 0; i < selectedFiles.files.length; i++) {
             const file = selectedFiles.files[i];
             const fileReader = new FileReader();
@@ -229,37 +293,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 const fileType = file.type;
                 const fileUrl = e.target.result;
                 const filePreview = document.createElement('div');
-                filePreview.className = 'preview-item';
+                filePreview.className = 'preview-item reflowing';
+                
+                // Format file size
+                const fileSize = formatFileSize(file.size);
                 
                 if (fileType.startsWith('image/')) {
                     // Image preview
                     filePreview.innerHTML = `
                         <img src="${fileUrl}" alt="${file.name}">
-                        <button class="remove-item" data-filename="${file.name}">
-                            <i class="fas fa-times"></i>
+                        <button class="remove-item" data-filename="${file.name}" title="Remove file">
+                            <i class="fas fa-xmark fa-xs"></i>
                         </button>
+                        <div class="file-info">${file.name} (${fileSize})</div>
                     `;
                 } else if (fileType.startsWith('video/')) {
                     // Video preview
                     filePreview.innerHTML = `
-                        <video controls>
+                        <video controls preload="metadata">
                             <source src="${fileUrl}" type="${fileType}">
                             Your browser does not support the video tag.
                         </video>
-                        <button class="remove-item" data-filename="${file.name}">
-                            <i class="fas fa-times"></i>
+                        <button class="remove-item" data-filename="${file.name}" title="Remove file">
+                            <i class="fas fa-xmark fa-xs"></i>
                         </button>
+                        <div class="file-info">${file.name} (${fileSize})</div>
                     `;
+                    
+                    // Video load event
+                    const video = filePreview.querySelector('video');
+                    video.addEventListener('loadedmetadata', function() {
+                        // Adjust container based on video dimensions if needed
+                        if (video.videoHeight > 0 && video.videoWidth > 0) {
+                            // Set a reasonable max height
+                            const maxHeight = Math.min(video.videoHeight, 450);
+                            uploadArea.style.maxHeight = (maxHeight + 150) + 'px'; // Add extra space for controls and info
+                        }
+                    });
                 }
                 
                 previewContent.appendChild(filePreview);
                 
                 // Add event listener to remove button
                 const removeButton = filePreview.querySelector('.remove-item');
-                removeButton.addEventListener('click', function() {
+                removeButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
                     const fileName = this.getAttribute('data-filename');
                     removeFile(fileName);
                 });
+                
+                // Remove the animation class after animation completes
+                setTimeout(() => {
+                    filePreview.classList.remove('reflowing');
+                }, 300);
             };
             
             // Read the file as data URL
@@ -267,15 +354,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Replace the original generatePreviews function with our animated version
+    const generatePreviews = generatePreviewsWithAnimation;
+    
+    function formatFileSize(bytes) {
+        if (bytes < 1024) {
+            return bytes + ' B';
+        } else if (bytes < 1024 * 1024) {
+            return (bytes / 1024).toFixed(1) + ' KB';
+        } else {
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+    }
+    
     function clearPreview() {
         previewContent.innerHTML = '';
+        // Reset the upload area styles when clearing
+        if (selectedFiles.files.length === 0) {
+            uploadArea.classList.remove('has-files');
+            uploadArea.classList.remove('has-video');
+            uploadArea.style.maxHeight = '';
+            previewContent.classList.remove('single-video');
+        }
     }
     
     function updateFileInputUI() {
         if (selectedFiles.files.length > 0) {
             const fileCount = selectedFiles.files.length;
-            fileInputLabel.textContent = `${fileCount} file${fileCount > 1 ? 's' : ''} selected`;
-            
             // Update file note with file names if fewer than 3 files
             if (fileCount <= 3) {
                 const fileNames = Array.from(selectedFiles.files)
@@ -286,9 +391,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 fileNote.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-color);"></i> ${fileCount} files selected`;
             }
         } else {
-            fileInputLabel.textContent = 'Choose Files';
             fileNote.innerHTML = '<i class="fas fa-info-circle"></i> Select multiple images or one video';
-            previewContainer.style.display = 'none';
+            uploadArea.classList.remove('has-files');
         }
     }
 
