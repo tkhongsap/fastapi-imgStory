@@ -30,14 +30,40 @@ Based on the PRD (Product Requirements Document) for the PoC.
     - [x] Update response structure to include token information
     - [x] Add UI elements to display token usage information
     - [x] Style token usage display section
+- [x] Add basic logging to the backend
+    - [x] Configure logging at appropriate levels (INFO, ERROR)
+    - [x] Add log statements for API calls, errors, and application lifecycle
+    - [x] Include error details in logging for debugging purposes
 
 ## In Progress Tasks
-- [ ] Test backend endpoints thoroughly (single image, multiple images, video, prompt variations)
-- [ ] Test frontend interaction and display (loading, results, errors)
-- [ ] Refine error handling and messages (frontend and backend)
-- [ ] Add basic logging to the backend
+- [ ] Test backend endpoints thoroughly
+    - [ ] Test single image upload analysis
+    - [ ] Test multiple image upload analysis
+    - [ ] Test video upload analysis
+    - [ ] Test with various prompt variations
+    - [ ] Test error handling scenarios
+- [ ] Refine error handling and messages 
+    - [ ] Improve user-facing error messages on frontend
+    - [ ] Add more specific error types for different failure scenarios
+    - [ ] Handle OpenAI API rate limiting and quotas
 
 ## Upcoming Tasks
-- [ ] Consider adding simple validation for file types/sizes on the backend
-- [ ] (Optional/Future) Explore adding thumbnail generation for videos if time permits and complexity is manageable within PoC scope.
-- [ ] Prepare instructions for running the application (`README.md`) 
+- [ ] Add file type and size validation
+    - [ ] Implement server-side validation for allowed file types (JPG, PNG, MP4)
+    - [ ] Add file size limits to prevent overly large uploads
+    - [ ] Provide clear error messages for invalid files
+- [ ] Improve video processing capabilities
+    - [ ] Add thumbnail generation for videos
+    - [ ] Extract and analyze multiple frames for better video understanding
+    - [ ] Process video audio track if present (optional)
+- [ ] Optimize performance
+    - [ ] Implement proper file cleanup after processing
+    - [ ] Add caching for frequent requests if applicable
+    - [ ] Optimize image resizing before sending to API
+- [ ] Create documentation
+    - [ ] Create README.md with setup and usage instructions
+    - [ ] Document API endpoints and parameters
+    - [ ] Add example requests and responses
+- [ ] Deploy application (if applicable)
+    - [ ] Prepare for production deployment
+    - [ ] Configure environment for production 
