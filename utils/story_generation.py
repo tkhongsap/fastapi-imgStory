@@ -164,7 +164,7 @@ def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, 
         
         # Log token usage and cost for debugging
         logger.info(f"Token usage - Input: {input_tokens}, Output: {output_tokens}")
-        logger.info(f"Cost - USD: ${total_cost_usd:.6f}, THB: ฿{total_cost_thb:.6f}")
+        logger.info(f"Cost - USD: {total_cost_usd:.6f}, THB: {total_cost_thb:.6f}")
         
         return parsed_response
     except Exception as e:
@@ -262,7 +262,7 @@ def generate_story_from_multiple_images(base64_images: List[str], user_prompt: s
         
         # Log token usage and cost for debugging
         logger.info(f"Token usage - Input: {input_tokens}, Output: {output_tokens}")
-        logger.info(f"Cost - USD: ${total_cost_usd:.6f}, THB: ฿{total_cost_thb:.6f}")
+        logger.info(f"Cost - USD: {total_cost_usd:.6f}, THB: {total_cost_thb:.6f}")
         
         return parsed_response
     except Exception as e:
@@ -378,7 +378,7 @@ def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -
         
         # Log token usage and cost for debugging
         logger.info(f"Token usage from video metadata - Input: {input_tokens}, Output: {output_tokens}")
-        logger.info(f"Cost - USD: ${total_cost_usd:.6f}, THB: ฿{total_cost_thb:.6f}")
+        logger.info(f"Cost - USD: {total_cost_usd:.6f}, THB: {total_cost_thb:.6f}")
         
         return parsed_response
         
