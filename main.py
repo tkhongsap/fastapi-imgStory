@@ -27,9 +27,9 @@ from utils.story_generation import (
     generate_story_from_image,
     generate_story_from_multiple_images, 
     generate_story_from_video,
-    parse_openai_response,
-    STORY_GENERATION_PROMPT
+    parse_openai_response
 )
+from utils.prompts import STORY_GENERATION_PROMPT
 
 # --- Configuration & Setup --- 
 
@@ -38,23 +38,30 @@ SCRIPT_DIR = pathlib.Path(__file__).parent.resolve()
 # Construct the path to the .env file
 DOTENV_PATH = SCRIPT_DIR / ".env"
 
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+
 # Load environment variables from .env file in the script's directory
 # Use override=True to ensure .env takes precedence over system variables
-logger = logging.getLogger(__name__) # Get logger early for dotenv status
-if DOTENV_PATH.is_file():
-    logger.info(f"Loading environment variables from: {DOTENV_PATH}")
-    load_dotenv(dotenv_path=DOTENV_PATH, override=True)
-else:
-    logger.warning(f".env file not found at {DOTENV_PATH}. Relying on system environment variables.")
-    load_dotenv(override=True) # Attempt to load from default locations or just use system vars
-
-# Configure logging (can be done after loading .env if log level is set there)
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-# logger = logging.getLogger(__name__) # Logger already initialized above
+try:
+    if DOTENV_PATH.is_file():
+        logger.info(f"Loading environment variables from: {DOTENV_PATH}")
+        load_dotenv(dotenv_path=DOTENV_PATH, override=True)
+    else:
+        logger.warning(f".env file not found at {DOTENV_PATH}. Relying on system environment variables.")
+        load_dotenv(override=True) # Attempt to load from default locations or just use system vars
+except Exception as e:
+    logger.error(f"Error loading environment variables: {e}")
+    # Continue execution, but log the error
 
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = SCRIPT_DIR / "uploads"
-os.makedirs(UPLOAD_DIR, exist_ok=True)
+try:
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+except Exception as e:
+    logger.error(f"Error creating upload directory: {e}")
+    # This is a critical error, but we'll continue and let it fail when accessed
 
 # --- FastAPI App Setup --- 
 app = FastAPI(title="Media Analysis Story Generator API")
@@ -77,7 +84,11 @@ app.add_middleware(
 )
 
 # Mount static files (CSS, JS)
-app.mount("/static", StaticFiles(directory=SCRIPT_DIR / "static"), name="static")
+try:
+    app.mount("/static", StaticFiles(directory=SCRIPT_DIR / "static"), name="static")
+except Exception as e:
+    logger.error(f"Error mounting static files: {e}")
+    # This is a warning, but we'll continue as API endpoints may still work
 
 # --- FastAPI Lifecycle Events ---
 
@@ -85,13 +96,20 @@ app.mount("/static", StaticFiles(directory=SCRIPT_DIR / "static"), name="static"
 async def startup_event():
     """Initialize resources on application startup"""
     logger.info("Application starting up, initializing OpenAI client...")
-    openai_client.initialize_openai_client()
+    try:
+        openai_client.initialize_openai_client()
+    except Exception as e:
+        logger.error(f"Error initializing OpenAI client: {e}")
+        # The application will continue but may not work correctly
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Clean up resources on application shutdown"""
     logger.info("Application shutting down, cleaning up resources...")
-    openai_client.cleanup_client()
+    try:
+        openai_client.cleanup_client()
+    except Exception as e:
+        logger.error(f"Error during cleanup: {e}")
 
 # --- API Endpoints --- 
 
@@ -135,10 +153,13 @@ async def analyze_media_endpoint(
     except Exception as e:
         # Catch any other unexpected errors during endpoint processing
         logger.exception("An unexpected error occurred in the /analyze endpoint.")
-        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred.")
+        raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn
     logger.info("Starting Uvicorn server...")
-    # Use reload=True for development
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True) 
+    try:
+        # Use reload=True for development
+        uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    except Exception as e:
+        logger.error(f"Failed to start server: {e}") 
