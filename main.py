@@ -5,7 +5,13 @@ import re
 import logging
 import aiofiles
 import pathlib # Import pathlib
+import tempfile
+import cv2 # For extracting frames from videos
+import numpy as np
+import subprocess
+import ffmpeg # FFmpeg Python bindings for enhanced video processing
 from typing import List, Dict, Optional, Any
+import shutil
 
 from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -44,9 +50,9 @@ API_KEY = os.getenv("OPENAI_API_KEY")
 ORG_ID = os.getenv("OPENAI_ORG_ID")
 
 # Model selection (similar logic to TS example)
-# Use gpt-4o-mini as requested in custom instructions
-VISION_MODEL = "gpt-4o-mini" 
-FALLBACK_VISION_MODEL = "gpt-4o-mini" # Fallback if preferred is unavailable, but mini should be available
+# Use gpt-4.1-mini as requested in custom instructions
+VISION_MODEL = "gpt-4.1-mini" 
+FALLBACK_VISION_MODEL = "gpt-4.1-mini" # Fallback if preferred is unavailable, but mini should be available
 active_vision_model = VISION_MODEL
 using_fallback_mode = False # Flag if API key is invalid or models unavailable
 
@@ -229,19 +235,40 @@ async def analyze_media(files: List[UploadFile], prompt: str) -> Dict[str, str]:
         is_video = True
         video_file = files[0]
         logger.info(f"Detected video file: {video_file.filename}")
-        # Basic video handling (save metadata)
-        # Note: Thumbnail extraction is out of scope for this PoC as per PRD
-        video_details = {
-            "filename": video_file.filename or "unknown_video",
-            "mimetype": video_file.content_type,
-            "size": video_file.size or 0, # Get size if available
-            # Duration would require a library like moviepy or ffprobe - skipping for PoC
-            "duration": "Unknown", 
-            "thumbnailBase64": None # No thumbnail extraction
-        }
-        # Close the file handle for the video file after reading metadata if needed
-        # await video_file.close() # Uncomment if you read the file content
-
+        
+        # Save video file to temporary location to process it
+        temp_file_path = None
+        try:
+            # Create temp file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=f".{video_file.filename.split('.')[-1]}") as temp_file:
+                temp_file_path = temp_file.name
+                contents = await video_file.read()
+                temp_file.write(contents)
+            
+            # Extract video metadata
+            video_details = {
+                "filename": video_file.filename or "unknown_video",
+                "mimetype": video_file.content_type,
+                "size": video_file.size or 0,
+                "duration": "Unknown", 
+                "thumbnailBase64": None,
+                "file_path": temp_file_path  # Store path for frame extraction
+            }
+            # Instead of just metadata analysis, extract frames and analyze them
+            result = extract_frames_and_analyze_video(video_details, prompt)
+        except Exception as e:
+            logger.error(f"Error processing video file: {e}")
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+            raise HTTPException(status_code=500, detail=f"Error processing video file: {str(e)}")
+        finally:
+            # Reset file position for potential future reads
+            await video_file.seek(0)
+            # Delete temp file when done (if it exists)
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+        
+        return result
     elif all(f.content_type and f.content_type.startswith('image/') for f in files):
         logger.info(f"Detected {len(files)} image file(s).")
         image_files = files # Keep the list of UploadFile objects for now
@@ -294,6 +321,194 @@ async def analyze_media(files: List[UploadFile], prompt: str) -> Dict[str, str]:
             except Exception:
                 pass # Ignore errors during cleanup close
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred during analysis: {str(e)}")
+
+def extract_frames_and_analyze_video(video_details: Dict[str, Any], user_prompt: str) -> Dict[str, str]:
+    """
+    Extract frames from video, analyze them and generate a story.
+    
+    Args:
+        video_details: Dictionary containing video details
+        user_prompt: Optional user prompt to guide the story generation
+        
+    Returns:
+        Dict with video details, story, and other metadata
+    """
+    temp_dir = tempfile.mkdtemp()
+    logger.info(f"Processing video: {video_details.get('filename')}")
+    
+    # Extract more detailed metadata using FFmpeg before attempting frame extraction
+    try:
+        probe = ffmpeg.probe(video_details.get('file_path'))
+        # Extract video stream info
+        video_stream = next((stream for stream in probe['streams'] 
+                            if stream['codec_type'] == 'video'), None)
+        
+        if video_stream:
+            # Update video details with more accurate information
+            video_details['width'] = int(video_stream.get('width', 0))
+            video_details['height'] = int(video_stream.get('height', 0))
+            video_details['frame_rate'] = eval(video_stream.get('r_frame_rate', '0/1'))
+            
+            # Calculate duration more accurately
+            if 'duration' in video_stream:
+                duration_sec = float(video_stream['duration'])
+                video_details['duration'] = f"{int(duration_sec // 60)}:{int(duration_sec % 60):02d}"
+                video_details['duration_seconds'] = duration_sec
+            
+            # Get total frames if available
+            if 'nb_frames' in video_stream:
+                video_details['total_frames'] = int(video_stream['nb_frames'])
+            
+        # Check for audio streams
+        audio_stream = next((stream for stream in probe['streams'] 
+                            if stream['codec_type'] == 'audio'), None)
+        video_details['has_audio'] = audio_stream is not None
+        if audio_stream:
+            video_details['audio_codec'] = audio_stream.get('codec_name', 'unknown')
+            
+    except Exception as e:
+        logger.warning(f"Failed to extract detailed metadata with FFmpeg: {e}")
+    
+    # Try to extract frames using OpenCV first
+    frames = []
+    try:
+        cap = cv2.VideoCapture(video_details.get('file_path'))
+        if not cap.isOpened():
+            raise Exception("Failed to open video file with OpenCV")
+        
+        # Get video properties
+        fps = cap.get(cv2.CAP_PROP_FPS)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        duration = frame_count / fps if fps > 0 else 0
+        
+        # Update video_details with OpenCV values if we have them
+        if fps > 0:
+            video_details['frame_rate'] = fps
+        if frame_count > 0:
+            video_details['total_frames'] = frame_count
+        if duration > 0:
+            video_details['duration_seconds'] = duration
+            video_details['duration'] = f"{int(duration // 60)}:{int(duration % 60):02d}"
+        
+        # Extract frames - aim for 10 evenly spaced frames
+        if frame_count > 0:
+            target_frames = min(10, frame_count)
+            frame_indices = [int(i * frame_count / target_frames) for i in range(target_frames)]
+            
+            for frame_idx in frame_indices:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, frame_idx)
+                ret, frame = cap.read()
+                if ret:
+                    # Convert from BGR to RGB
+                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                    frames.append(frame_rgb)
+                    
+        cap.release()
+        logger.info(f"Successfully extracted {len(frames)} frames with OpenCV")
+        
+    except Exception as e:
+        logger.warning(f"Failed to extract frames with OpenCV: {e}")
+        
+    # If OpenCV failed to extract any frames, try with FFmpeg as fallback
+    if not frames:
+        logger.info("Falling back to FFmpeg for frame extraction")
+        try:
+            # Create output directory for frames
+            frame_files = []
+            
+            # Calculate timestamps for 10 evenly distributed frames
+            if 'duration_seconds' in video_details and video_details['duration_seconds'] > 0:
+                duration_sec = video_details['duration_seconds']
+                timestamps = [i * duration_sec / 10 for i in range(10)]
+                
+                for i, timestamp in enumerate(timestamps):
+                    out_file = os.path.join(temp_dir, f"frame_{i:03d}.jpg")
+                    ffmpeg.input(video_details.get('file_path'), ss=timestamp).output(
+                        out_file, vframes=1, format='image2', vcodec='mjpeg'
+                    ).overwrite_output().run(quiet=True, capture_stdout=True, capture_stderr=True)
+                    
+                    frame_files.append(out_file)
+                    
+                # Read the extracted frames
+                for frame_file in frame_files:
+                    if os.path.exists(frame_file) and os.path.getsize(frame_file) > 0:
+                        img = cv2.imread(frame_file)
+                        if img is not None:
+                            img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+                            frames.append(img_rgb)
+                
+                logger.info(f"Successfully extracted {len(frames)} frames with FFmpeg")
+            else:
+                logger.warning("Could not determine video duration for FFmpeg frame extraction")
+                
+        except Exception as e:
+            logger.error(f"FFmpeg frame extraction also failed: {e}")
+    
+    # If we have frames, convert them to base64 and analyze
+    frame_images = []
+    if frames:
+        try:
+            for frame in frames:
+                # Convert to base64
+                success, encoded_img = cv2.imencode('.jpg', cv2.cvtColor(frame, cv2.COLOR_RGB2BGR))
+                if success:
+                    img_base64 = base64.b64encode(encoded_img).decode('utf-8')
+                    frame_images.append(img_base64)
+            
+            video_details['frame_count'] = len(frame_images)
+            result = analyze_frames(frame_images, video_details, user_prompt)
+            
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error processing frames: {e}")
+            shutil.rmtree(temp_dir, ignore_errors=True)
+            # Fall through to metadata-only analysis
+    
+    # If we couldn't extract any frames, generate a story based on metadata only
+    logger.warning("No frames could be extracted. Falling back to metadata-only analysis.")
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    result = video_details.copy()
+    story_result = generate_story_from_video(video_details, user_prompt)
+    result.update(story_result)
+    return result
+
+def analyze_frames(frame_images: List[str], video_details: Dict[str, Any], user_prompt: str) -> Dict[str, str]:
+    """
+    Analyzes video frames and generates a story based on the content of those frames.
+    
+    Args:
+        frame_images: List of base64-encoded frames from the video
+        video_details: Dictionary containing video metadata
+        user_prompt: Optional user prompt to guide the story generation
+        
+    Returns:
+        Dict with video details and generated story
+    """
+    logger.info(f"Analyzing {len(frame_images)} frames from video")
+    
+    if len(frame_images) == 0:
+        raise ValueError("No frames provided for analysis")
+    
+    try:
+        # Reuse the multiple images story generation function as it already handles
+        # multiple base64-encoded images, which is what our frames are
+        story_result = generate_story_from_multiple_images(frame_images, 
+            user_prompt or "Create an engaging caption that captures what's happening in this video")
+        
+        # Combine video details with the story result
+        result = video_details.copy()
+        result.update(story_result)
+        return result
+    except Exception as e:
+        logger.error(f"Error in analyze_frames function: {e}")
+        # Fall back to metadata-only analysis if frame analysis fails
+        fallback_result = generate_story_from_video(video_details, user_prompt)
+        result = video_details.copy()
+        result.update(fallback_result)
+        return result
 
 # --- Specific OpenAI Call Functions ---
 
@@ -358,97 +573,140 @@ def parse_openai_response(content: Optional[str]) -> Dict[str, str]:
         raise ValueError(f"Error processing AI response: {e}")
 
 def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, str]:
-    """Generates story from a single base64 encoded image."""
-    logger.info("Generating story from single image.")
-    if client is None: raise RuntimeError("OpenAI client not initialized") # Should be caught earlier
+    """Generates story from a single base64 encoded image using the OpenAI Responses API."""
+    logger.info("Generating story from single image (Responses API).")
+    if client is None:
+        raise RuntimeError("OpenAI client not initialized")
 
-    messages = [
-        {"role": "system", "content": STORY_GENERATION_PROMPT},
+    input_data = [
         {
             "role": "user",
             "content": [
-                {"type": "text", "text": user_prompt or "Create an engaging caption for this image that captures its essence and tells its story."},
-                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}}
+                {"type": "input_text", "text": user_prompt or "Create an engaging caption for this image that captures its essence and tells its story."},
+                {"type": "input_image", "image_url": f"data:image/jpeg;base64,{base64_image}"}
             ]
         }
     ]
 
     try:
-        # Note: removed 'await' - OpenAI Python client is synchronous
-        response = client.chat.completions.create(
+        response = client.responses.create(
             model=active_vision_model,
-            messages=messages,
-            max_tokens=300, # Reduced max_tokens for caption generation
-            # response_format={"type": "json_object"} # Request JSON mode if model supports it reliably
+            input=input_data,
+            instructions=STORY_GENERATION_PROMPT
+            # max_tokens is not supported in Responses API; control output length via prompt/instructions
         )
-        content = response.choices[0].message.content
-        return parse_openai_response(content)
+        # Prefer the output_text attribute if available (as in SDK example)
+        if hasattr(response, "output_text") and response.output_text:
+            return parse_openai_response(response.output_text)
+        # Otherwise, search for the first output_text block in response.output
+        for block in response.output:
+            for content in getattr(block, "content", []):
+                if getattr(content, "type", None) == "output_text":
+                    return parse_openai_response(getattr(content, "text", ""))
+        raise ValueError("No output_text found in OpenAI response")
     except Exception as e:
-        logger.error(f"Error in generate_story_from_image: {e}")
-        raise # Re-raise to be caught by the main endpoint handler
+        logger.error(f"Error in generate_story_from_image (Responses API): {e}")
+        raise
 
 def generate_story_from_multiple_images(base64_images: List[str], user_prompt: str) -> Dict[str, str]:
-    """Generates story from multiple base64 encoded images."""
-    logger.info(f"Generating story from {len(base64_images)} images.")
-    if client is None: raise RuntimeError("OpenAI client not initialized")
+    """Generates story from multiple base64 encoded images using the OpenAI Responses API."""
+    logger.info(f"Generating story from {len(base64_images)} images (Responses API).")
+    if client is None:
+        raise RuntimeError("OpenAI client not initialized")
 
     user_content: List[Dict[str, Any]] = [
-        {"type": "text", "text": user_prompt or "Create an engaging caption that connects these images and tells their collective story."}
+        {"type": "input_text", "text": user_prompt or "Create an engaging caption that connects these images and tells their collective story."}
     ]
     for img_b64 in base64_images:
-        user_content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}})
+        user_content.append({"type": "input_image", "image_url": f"data:image/jpeg;base64,{img_b64}"})
 
-    messages = [
-        {"role": "system", "content": STORY_GENERATION_PROMPT},
+    input_data = [
         {"role": "user", "content": user_content}
     ]
 
     try:
-        # Note: removed 'await' - OpenAI Python client is synchronous
-        response = client.chat.completions.create(
+        response = client.responses.create(
             model=active_vision_model,
-            messages=messages,
-            max_tokens=300,
-            # response_format={"type": "json_object"}
+            input=input_data,
+            instructions=STORY_GENERATION_PROMPT
+            # max_tokens is not supported in Responses API; control output length via prompt/instructions
         )
-        content = response.choices[0].message.content
-        return parse_openai_response(content)
+        if hasattr(response, "output_text") and response.output_text:
+            return parse_openai_response(response.output_text)
+        for block in response.output:
+            for content in getattr(block, "content", []):
+                if getattr(content, "type", None) == "output_text":
+                    return parse_openai_response(getattr(content, "text", ""))
+        raise ValueError("No output_text found in OpenAI response")
     except Exception as e:
-        logger.error(f"Error in generate_story_from_multiple_images: {e}")
+        logger.error(f"Error in generate_story_from_multiple_images (Responses API): {e}")
         raise
 
 def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -> Dict[str, str]:
-    """Generates story from video metadata (no visual content as per PoC)."""
-    logger.info(f"Generating story from video metadata: {video_details.get('filename')}")
-    if client is None: raise RuntimeError("OpenAI client not initialized")
-
-    # Construct a text prompt based on metadata
-    metadata_text = f"Analyze the metadata for a video:\n"
-    metadata_text += f"- Filename: {video_details.get('filename', 'N/A')}\n"
-    metadata_text += f"- Duration: {video_details.get('duration', 'Unknown')}\n"
-    metadata_text += f"- Format: {video_details.get('mimetype', 'N/A')}\n"
-    metadata_text += f"- Size: {round(video_details.get('size', 0) / (1024*1024), 1)}MB\n"
-    metadata_text += f"\n{user_prompt or 'Create an engaging social media caption based on this video metadata.'}"
-
-    messages = [
-        {"role": "system", "content": STORY_GENERATION_PROMPT},
-        {"role": "user", "content": [{"type": "text", "text": metadata_text}]}
-        # No image_url for video metadata-only analysis
-    ]
-
+    """
+    Generates a story based on video metadata when frame extraction fails.
+    Uses available metadata like duration, resolution, filename, etc.
+    """
+    logger.info("Falling back to metadata-based video analysis")
+    
+    # Prepare metadata description
+    filename = video_details.get('filename', 'Unknown file')
+    duration = video_details.get('duration', 'Unknown')
+    width = video_details.get('width', 'Unknown')
+    height = video_details.get('height', 'Unknown')
+    has_audio = video_details.get('has_audio', False)
+    audio_codec = video_details.get('audio_codec', 'unknown') if has_audio else 'none'
+    
+    metadata_description = (
+        f"A video file named '{filename}' with duration {duration}. "
+        f"Resolution: {width}x{height}. "
+    )
+    
+    if has_audio:
+        metadata_description += f"The video has audio using {audio_codec} codec. "
+    else:
+        metadata_description += "The video does not have audio. "
+    
+    # Add file extension info for context
+    file_ext = os.path.splitext(filename)[1].lower() if filename != 'Unknown file' else ''
+    if file_ext:
+        metadata_description += f"The video format is {file_ext}. "
+    
+    if user_prompt:
+        metadata_description += f"User prompt: {user_prompt}"
+    
     try:
-        # Note: removed 'await' - OpenAI Python client is synchronous
-        response = client.chat.completions.create(
-            model=active_vision_model, # Vision model can handle text-only input
-            messages=messages,
-            max_tokens=300,
-            # response_format={"type": "json_object"}
+        # Use the Responses API to generate a story based on metadata
+        response = client.responses.create(
+            model=active_vision_model,
+            input=[
+                {
+                    "role": "user", 
+                    "content": [
+                        {
+                            "type": "input_text", 
+                            "text": f"Create an engaging caption for a video with these details: {metadata_description}"
+                        }
+                    ]
+                }
+            ],
+            instructions=STORY_GENERATION_PROMPT
         )
-        content = response.choices[0].message.content
-        return parse_openai_response(content)
+        
+        if hasattr(response, "output_text") and response.output_text:
+            return parse_openai_response(response.output_text)
+        
+        for block in response.output:
+            for content in getattr(block, "content", []):
+                if getattr(content, "type", None) == "output_text":
+                    return parse_openai_response(getattr(content, "text", ""))
+        
+        # If no text is found in response
+        return {"story": f"This appears to be a {duration} video named '{filename}'. Without being able to see the content, I cannot provide specific details about what it contains."}
+    
     except Exception as e:
-        logger.error(f"Error in generate_story_from_video: {e}")
-        raise
+        logger.error(f"Error in metadata-based video analysis: {e}")
+        return {"story": f"This appears to be a video file named '{filename}'. I wasn't able to analyze its contents."}
 
 
 if __name__ == "__main__":
