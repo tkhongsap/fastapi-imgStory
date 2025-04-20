@@ -153,18 +153,27 @@ a {
 
 /* Upload Form Styles */
 .upload-area {
-    padding: 1.5rem;
-    border: 2px dashed #d1d5db;
+    padding: 2rem;
+    border: 2px solid #d1d5db;
     border-radius: var(--border-radius);
     text-align: center;
     margin-bottom: 1.5rem;
     transition: var(--transition);
-    background-color: #f9fafb;
+    background-color: #f5f7ff;
+    position: relative;
 }
 
-.upload-area:hover {
-    border-color: var(--primary-light);
-    background-color: #f5f7ff;
+.upload-area:hover, .upload-area.highlight {
+    border-color: var(--primary-color);
+    background-color: #eef1ff;
+    box-shadow: 0 4px 10px rgba(78, 84, 200, 0.1);
+}
+
+.upload-area.highlight {
+    border-width: 3px;
+    border-style: solid;
+    border-color: var(--primary-color);
+    box-shadow: 0 6px 15px rgba(78, 84, 200, 0.2);
 }
 
 .file-input-label {
@@ -177,9 +186,37 @@ a {
     color: var(--primary-color);
 }
 
+.file-input-label p {
+    font-size: 1.1rem;
+    margin: 0.5rem 0;
+    color: var(--gray-text);
+}
+
 .file-input-label i {
-    font-size: 2.5rem;
-    color: var(--primary-light);
+    font-size: 3rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+    transition: var(--transition);
+}
+
+.upload-area:hover .file-input-label i {
+    transform: scale(1.1);
+}
+
+.file-input-label span {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 30px;
+    font-weight: 500;
+    box-shadow: 0 4px 8px rgba(78, 84, 200, 0.2);
+    transition: var(--transition);
+}
+
+.file-input-label:hover span {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(78, 84, 200, 0.3);
 }
 
 input[type="file"] {
@@ -192,8 +229,8 @@ input[type="file"] {
 }
 
 .file-note {
-    margin-top: 1rem;
-    font-size: 0.85rem;
+    margin-top: 1.2rem;
+    font-size: 0.9rem;
     color: var(--gray-text);
     display: flex;
     align-items: center;
@@ -294,6 +331,7 @@ input[type="file"] {
     line-height: 1.7;
     color: var(--dark-text);
     white-space: pre-wrap;
+    padding-right: 2.5rem;
 }
 
 .copy-btn {
@@ -347,6 +385,22 @@ input[type="file"] {
     flex-direction: column;
     align-items: center;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.cost-container {
+    grid-column: span 2;
+}
+
+.cost-values {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+}
+
+.cost-separator {
+    color: var(--gray-text);
+    font-weight: 400;
 }
 
 .stat-label {
@@ -427,5 +481,83 @@ footer p {
     
     .stats-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .cost-container {
+        grid-column: span 1;
+    }
+    
+    .file-input-label i {
+        font-size: 2.5rem;
+    }
+    
+    .file-input-label p {
+        font-size: 1rem;
+    }
+    
+    .upload-area {
+        padding: 1.5rem 1rem;
+    }
+    
+    .submit-button {
+        padding: 0.8rem;
+        font-size: 1rem;
+    }
+    
+    .copy-btn {
+        top: 5px;
+        right: 5px;
+        padding: 0.2rem 0.4rem;
+        font-size: 0.8rem;
+    }
+    
+    .caption-content p {
+        padding: 1rem;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .hero h1 {
+        font-size: 1.8rem;
+    }
+    
+    .hero .subtitle {
+        font-size: 0.9rem;
+    }
+    
+    .card-header h2 {
+        font-size: 1.3rem;
+    }
+    
+    .card-header p {
+        font-size: 0.85rem;
+    }
+    
+    .container {
+        width: 95%;
+        padding: 1rem 0;
+    }
+    
+    .file-input-label span {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .file-note {
+        font-size: 0.8rem;
+    }
+    
+    .stat-value {
+        font-size: 1rem;
+    }
+    
+    .token-usage h3 {
+        font-size: 1rem;
+    }
+    
+    .caption-box h3 {
+        font-size: 0.95rem;
+        padding: 0.7rem;
     }
 } 

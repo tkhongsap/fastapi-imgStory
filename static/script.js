@@ -14,21 +14,61 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyButtons = document.querySelectorAll('.copy-btn');
     const fileInputLabel = document.querySelector('.file-input-label span');
     const fileNote = document.querySelector('.file-note');
+    const uploadArea = document.querySelector('.upload-area');
 
     // Cost constants for gpt-4.1-mini (per 1M tokens)
     const INPUT_COST_USD_PER_MILLION = 0.40;
     const OUTPUT_COST_USD_PER_MILLION = 1.60;
     const USD_TO_THB_RATE = 35.0;
 
+    // Drag and drop functionality
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        uploadArea.addEventListener(eventName, unhighlight, false);
+    });
+    
+    function highlight() {
+        uploadArea.classList.add('highlight');
+    }
+    
+    function unhighlight() {
+        uploadArea.classList.remove('highlight');
+    }
+    
+    uploadArea.addEventListener('drop', handleDrop, false);
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        fileInput.files = files;
+        updateFileInputUI(files);
+    }
+
     // File input visual feedback
     fileInput.addEventListener('change', function() {
-        if (fileInput.files.length > 0) {
-            const fileCount = fileInput.files.length;
+        updateFileInputUI(this.files);
+    });
+    
+    function updateFileInputUI(files) {
+        if (files && files.length > 0) {
+            const fileCount = files.length;
             fileInputLabel.textContent = `${fileCount} file${fileCount > 1 ? 's' : ''} selected`;
             
             // Update file note with file names if fewer than 3 files
             if (fileCount <= 3) {
-                const fileNames = Array.from(fileInput.files)
+                const fileNames = Array.from(files)
                     .map(file => file.name)
                     .join(', ');
                 fileNote.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-color);"></i> ${fileNames}`;
@@ -36,10 +76,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 fileNote.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-color);"></i> ${fileCount} files selected`;
             }
         } else {
-            fileInputLabel.textContent = 'Select Media Files';
+            fileInputLabel.textContent = 'Choose Files';
             fileNote.innerHTML = '<i class="fas fa-info-circle"></i> Select multiple images or one video';
         }
-    });
+    }
 
     // Copy button functionality
     copyButtons.forEach(button => {

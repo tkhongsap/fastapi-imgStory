@@ -13,9 +13,6 @@
         <div class="hero-content">
             <h1>ImgStory</h1>
             <p class="subtitle">AI-powered caption generator for your photos and videos</p>
-            <div class="hero-cta">
-                <a href="#upload-section" class="cta-button">Get Started <i class="fas fa-arrow-right"></i></a>
-            </div>
         </div>
     </header>
 
@@ -30,8 +27,9 @@
                     <form id="upload-form">
                         <div class="upload-area">
                             <label for="media-files" class="file-input-label">
-                                <i class="fas fa-file-image"></i>
-                                <span>Select Media Files</span>
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                <p>Drag & drop files here</p>
+                                <span>Choose Files</span>
                             </label>
                             <input type="file" id="media-files" name="files" accept="image/jpeg, image/png, video/mp4" multiple>
                             <p class="file-note"><i class="fas fa-info-circle"></i> Select multiple images or one video</p>
@@ -80,13 +78,13 @@
                                 <span class="stat-label">Output Tokens</span>
                                 <span id="output-tokens" class="stat-value">0</span>
                             </div>
-                            <div class="stat-item">
-                                <span class="stat-label">Cost (USD)</span>
-                                <span id="cost-usd" class="stat-value">$0.00</span>
-                            </div>
-                            <div class="stat-item">
-                                <span class="stat-label">Cost (THB)</span>
-                                <span id="cost-thb" class="stat-value">฿0.00</span>
+                            <div class="stat-item cost-container">
+                                <span class="stat-label">Total Cost</span>
+                                <div class="cost-values">
+                                    <span id="cost-usd" class="stat-value">$0.00</span>
+                                    <span class="cost-separator">/</span>
+                                    <span id="cost-thb" class="stat-value">฿0.00</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -102,7 +100,7 @@
 
     <footer>
         <div class="container">
-            <p>&copy; 2023 ImgStory | Media Analysis Story Generator</p>
+            <p>&copy; 2025 ImgStory | Media Analysis Story Generator</p>
         </div>
     </footer>
 
