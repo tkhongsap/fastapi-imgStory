@@ -441,6 +441,31 @@ input[type="file"] {
 .error-card p {
     color: var(--danger-color);
     font-weight: 500;
+    margin-bottom: 1.25rem;
+}
+
+.retry-button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.retry-button:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.retry-button:active {
+    transform: translateY(0);
 }
 
 /* Results display state */

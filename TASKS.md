@@ -34,18 +34,19 @@ Based on the PRD (Product Requirements Document) for the PoC.
     - [x] Configure logging at appropriate levels (INFO, ERROR)
     - [x] Add log statements for API calls, errors, and application lifecycle
     - [x] Include error details in logging for debugging purposes
+- [x] Enhance error handling and messages 
+    - [x] Improve user-facing error messages on frontend
+    - [x] Add more specific error types for different failure scenarios
+    - [x] Handle OpenAI API rate limiting and quotas
+    - [x] Add retry functionality with user-friendly error messages
 
 ## In Progress Tasks
 - [ ] Test backend endpoints thoroughly
-    - [ ] Test single image upload analysis
-    - [ ] Test multiple image upload analysis
-    - [ ] Test video upload analysis
-    - [ ] Test with various prompt variations
-    - [ ] Test error handling scenarios
-- [ ] Refine error handling and messages 
-    - [ ] Improve user-facing error messages on frontend
-    - [ ] Add more specific error types for different failure scenarios
-    - [ ] Handle OpenAI API rate limiting and quotas
+    - [x] Test single image upload analysis
+    - [x] Test multiple image upload analysis
+    - [x] Test video upload analysis
+    - [x] Test with various prompt variations
+    - [x] Test error handling scenarios
 
 ## Upcoming Tasks
 - [ ] Add file type and size validation

@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileInputLabel = document.querySelector('.file-input-label span');
     const fileNote = document.querySelector('.file-note');
     const uploadArea = document.querySelector('.upload-area');
+    const retryButton = document.getElementById('retry-button');
 
     // Cost constants for gpt-4.1-mini (per 1M tokens)
     const INPUT_COST_USD_PER_MILLION = 0.40;
@@ -146,13 +147,45 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (!response.ok) {
                 let errorMessage = `HTTP error! status: ${response.status}`;
+                let errorDetail = '';
+                
                 try {
-                    const errorData = await response.json(); 
-                    errorMessage = errorData.detail || JSON.stringify(errorData);
+                    const errorData = await response.json();
+                    errorDetail = errorData.detail || JSON.stringify(errorData);
+                    
+                    // Handle specific error types
+                    if (errorDetail.includes('rate limit') || errorDetail.includes('quota')) {
+                        errorMessage = 'OpenAI API rate limit exceeded. Please try again in a few moments.';
+                    } else if (errorDetail.includes('file size')) {
+                        errorMessage = 'File size too large. Please upload smaller images or videos.';
+                    } else if (errorDetail.includes('file type') || errorDetail.includes('unsupported')) {
+                        errorMessage = 'Unsupported file type. Please upload JPG, PNG images or MP4 videos.';
+                    } else if (response.status === 413) {
+                        errorMessage = 'The uploaded file is too large. Please reduce file size and try again.';
+                    } else if (response.status === 415) {
+                        errorMessage = 'Unsupported media type. Only JPG, PNG images and MP4 videos are supported.';
+                    } else if (response.status === 429) {
+                        errorMessage = 'Too many requests. Please try again later.';
+                    } else if (response.status >= 500) {
+                        errorMessage = 'Server error. Our team has been notified. Please try again later.';
+                    } else {
+                        errorMessage = `Error: ${errorDetail}`;
+                    }
                 } catch (e) {
-                    // If parsing error JSON fails, use the status text
-                    errorMessage = `${errorMessage} - ${response.statusText}`;
+                    // If parsing error JSON fails, use the status text with user-friendly message
+                    if (response.status === 400) {
+                        errorMessage = 'Invalid request. Please check your files and try again.';
+                    } else if (response.status === 401 || response.status === 403) {
+                        errorMessage = 'Authentication error. Please refresh the page and try again.';
+                    } else if (response.status === 404) {
+                        errorMessage = 'Service endpoint not found. Please contact support.';
+                    } else if (response.status >= 500) {
+                        errorMessage = 'Server error. Our team has been notified. Please try again later.';
+                    } else {
+                        errorMessage = `Error: ${response.status} - ${response.statusText}`;
+                    }
                 }
+                
                 throw new Error(errorMessage);
             }
 
@@ -195,12 +228,38 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error submitting form:', error);
             loadingIndicator.style.display = 'none'; // Ensure loading is hidden on error
-            errorP.textContent = `Error: ${error.message || 'Failed to analyze media. Check console for details.'}`;
+            
+            let errorMessage = error.message || 'Failed to analyze media. Check console for details.';
+            
+            // Handle network errors
+            if (error.name === 'TypeError' && errorMessage.includes('Failed to fetch')) {
+                errorMessage = 'Network error. Please check your internet connection and try again.';
+            } else if (error.name === 'AbortError') {
+                errorMessage = 'Request was aborted. Please try again.';
+            } else if (error.name === 'TimeoutError' || errorMessage.includes('timeout')) {
+                errorMessage = 'Request timed out. Please try again later.';
+            }
+            
+            // Display the error message
+            errorP.textContent = errorMessage;
             errorDiv.style.display = 'block';
             resultsDiv.style.display = 'none'; // Keep results hidden on error
             
             // Smoothly scroll to error message
             errorDiv.scrollIntoView({ behavior: 'smooth' });
         }
+    });
+
+    // Retry button functionality
+    retryButton.addEventListener('click', function() {
+        // Hide error message
+        errorDiv.style.display = 'none';
+        
+        // Reset file input
+        fileInput.value = '';
+        updateFileInputUI(fileInput.files);
+        
+        // Scroll back to upload area
+        uploadArea.scrollIntoView({ behavior: 'smooth' });
     });
 }); 
