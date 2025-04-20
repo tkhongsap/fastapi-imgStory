@@ -8,6 +8,8 @@ document.getElementById('upload-form').addEventListener('submit', async function
     const resultsDiv = document.getElementById('results');
     const englishCaptionP = document.querySelector('#english-caption p');
     const thaiCaptionP = document.querySelector('#thai-caption p');
+    const inputTokensSpan = document.querySelector('#input-tokens');
+    const outputTokensSpan = document.querySelector('#output-tokens');
     const errorDiv = document.getElementById('error-message');
     const errorP = document.querySelector('#error-message p');
 
@@ -25,6 +27,8 @@ document.getElementById('upload-form').addEventListener('submit', async function
     errorDiv.style.display = 'none';
     englishCaptionP.textContent = '...';
     thaiCaptionP.textContent = '...';
+    inputTokensSpan.textContent = '0';
+    outputTokensSpan.textContent = '0';
 
     try {
         const response = await fetch('/analyze/', {
@@ -52,6 +56,11 @@ document.getElementById('upload-form').addEventListener('submit', async function
         // Display results
         englishCaptionP.textContent = data.english || 'No English caption generated.';
         thaiCaptionP.textContent = data.thai || 'No Thai caption generated.';
+        
+        // Display token usage
+        inputTokensSpan.textContent = data.input_tokens || '0';
+        outputTokensSpan.textContent = data.output_tokens || '0';
+        
         resultsDiv.style.display = 'block';
 
     } catch (error) {

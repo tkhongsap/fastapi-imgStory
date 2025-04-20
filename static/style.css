@@ -76,6 +76,33 @@ button:hover {
     border-radius: 3px;
 }
 
+#token-usage {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f0f8ff; /* Light blue background */
+    border: 1px solid #b8d6f8;
+    border-radius: 4px;
+}
+
+#token-usage h3 {
+    color: #0056b3;
+    margin-top: 0;
+    font-size: 1em;
+}
+
+#token-usage p {
+    font-family: monospace;
+    background-color: transparent;
+    padding: 5px;
+    border: none;
+    font-size: 0.9em;
+}
+
+#token-usage span {
+    font-weight: bold;
+    color: #007bff;
+}
+
 #error-message {
     margin-top: 20px;
     padding: 10px;
