@@ -19,6 +19,73 @@ def generate_api_docs_html():
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
         <style>
+            /* Navigation styles */
+            .nav-container {
+                position: relative;
+                width: 100%;
+                max-width: 1200px;
+                margin: 0 auto;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0 1rem;
+            }
+            .brand {
+                display: flex;
+                align-items: center;
+                flex-direction: column;
+                text-align: center;
+            }
+            .nav-menu {
+                position: absolute;
+                top: 1rem;
+                right: 1rem;
+                z-index: 10;
+            }
+            .nav-list {
+                display: flex;
+                list-style: none;
+                gap: 1rem;
+            }
+            .nav-item a {
+                color: white;
+                text-decoration: none;
+                font-weight: 500;
+                padding: 0.5rem 1rem;
+                border-radius: 30px;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .nav-item a:hover {
+                background-color: rgba(255, 255, 255, 0.2);
+            }
+            .nav-item.active a {
+                background-color: white;
+                color: var(--primary-color);
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            }
+            @media (max-width: 768px) {
+                .nav-menu {
+                    position: relative;
+                    top: 0;
+                    right: 0;
+                    margin-top: 1rem;
+                }
+                .nav-container {
+                    flex-direction: column;
+                    padding: 1rem;
+                }
+                .brand {
+                    margin-bottom: 1rem;
+                }
+                .nav-list {
+                    justify-content: center;
+                    width: 100%;
+                }
+            }
+            
             /* Additional styles for API docs page */
             .method {
                 display: inline-block;
@@ -102,9 +169,24 @@ def generate_api_docs_html():
     </head>
     <body>
         <header class="hero">
-            <div class="hero-content">
-                <h1>ImgStory API</h1>
-                <p class="subtitle">Documentation for the Media Analysis Story Generator API</p>
+            <div class="nav-container">
+                <div class="brand">
+                    <h1>ImgStory API</h1>
+                    <p class="subtitle">Documentation for the Media Analysis Story Generator API</p>
+                </div>
+                <nav class="nav-menu">
+                    <ul class="nav-list">
+                        <li class="nav-item">
+                            <a href="/"><i class="fas fa-home"></i> Home</a>
+                        </li>
+                        <li class="nav-item active">
+                            <a href="/api/docs"><i class="fas fa-book"></i> API Docs</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="https://github.com/tkhongsap/fastapi-imgStory" target="_blank"><i class="fab fa-github"></i> GitHub</a>
+                        </li>
+                    </ul>
+                </nav>
             </div>
         </header>
 
@@ -194,6 +276,23 @@ def generate_api_docs_html():
                             <pre><code>curl -X POST http://localhost:8000/analyze/ \\
   -F "files=@/path/to/your/image.jpg" \\
   -F "prompt=Generate a story about this image in the style of Anthony Bourdain"</code></pre>
+                            
+                            <h4><i class="fas fa-code"></i> Example Request (using JavaScript Fetch API)</h4>
+                            <pre><code>const formData = new FormData();
+formData.append('files', imageFile); // From file input
+formData.append('prompt', 'Generate a story about this image in the style of Anthony Bourdain');
+
+fetch('http://localhost:8000/analyze/', {
+  method: 'POST',
+  body: formData
+})
+.then(response => response.json())
+.then(data => {
+  console.log(data.english); // English story
+  console.log(data.thai);    // Thai story
+  console.log(data.token_usage); // Token usage statistics
+})
+.catch(error => console.error('Error:', error));</code></pre>
                             
                             <h4><i class="fas fa-exclamation-triangle"></i> Error Responses</h4>
                             <table class="error-table">
