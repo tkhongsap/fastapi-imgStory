@@ -27,9 +27,12 @@
                     <form id="upload-form">
                         <div class="upload-area">
                             <label for="media-files" class="file-input-label">
-                                <i class="fas fa-cloud-upload-alt"></i>
-                                <p>Drag & drop files here</p>
-                                <span>Choose Files</span>
+                                <div class="file-input-placeholder">
+                                    <i class="fas fa-cloud-upload-alt"></i>
+                                    <p>Drag & drop files here</p>
+                                    <span>Choose Files</span>
+                                </div>
+                                <div id="preview-content" class="preview-content"></div>
                             </label>
                             <input type="file" id="media-files" name="files" accept="image/jpeg, image/png, video/mp4" multiple>
                             <p class="file-note"><i class="fas fa-info-circle"></i> Select multiple images or one video</p>
@@ -37,7 +40,7 @@
                         </div>
                         <div id="preview-container" class="preview-container">
                             <h3><i class="fas fa-eye"></i> Media Preview</h3>
-                            <div id="preview-content" class="preview-content"></div>
+                            <div></div>
                         </div>
                         <button type="submit" class="submit-button"><i class="fas fa-magic"></i> Generate Captions</button>
                     </form>
