@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateFileInputUI(files) {
         if (files && files.length > 0) {
             // Validate files
-            const maxImageSize = 5 * 1024 * 1024; // 5MB in bytes
+            const maxImageSize = 10 * 1024 * 1024; // 10MB in bytes
             const maxVideoSize = 50 * 1024 * 1024; // 50MB in bytes
             const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png'];
             const allowedVideoTypes = ['video/mp4'];
@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const oversizedFiles = Array.from(files).filter(file => file.size > maxImageSize);
                     if (oversizedFiles.length > 0) {
                         const fileNames = oversizedFiles.map(f => f.name).join(', ');
-                        errorMessage = `File(s) too large: ${fileNames}. Maximum size per image is 5MB.`;
+                        errorMessage = `File(s) too large: ${fileNames}. Maximum size per image is 10MB.`;
                         hasErrors = true;
                     }
                 }

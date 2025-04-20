@@ -30,7 +30,7 @@ logger = logging.getLogger(__name__)
 # Constants
 ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png']
 ALLOWED_VIDEO_TYPES = ['video/mp4']
-MAX_IMAGE_SIZE_MB = 5  # 5MB max per image
+MAX_IMAGE_SIZE_MB = 10  # 10MB max per image
 MAX_VIDEO_SIZE_MB = 50  # 50MB max for video
 MB = 1024 * 1024  # 1MB in bytes
 

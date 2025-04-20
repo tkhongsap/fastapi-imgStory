@@ -136,7 +136,7 @@ async def analyze_media_endpoint(
     """
     Endpoint to receive media files and an optional prompt for analysis.
     Supports JPG, PNG images (multiple allowed) or a single MP4 video.
-    Maximum file size: 5MB per image, 50MB for video.
+    Maximum file size: 10MB per image, 50MB for video.
     
     Delegates the core logic to the analyze_media function.
     """
