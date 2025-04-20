@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Analysis Story Generator</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <h1>Media Analysis Story Generator (Prototype)</h1>
+    <p>Upload one or more images (JPG, PNG) or a single video (MP4) to generate a social media caption.</p>
+
+    <form id="upload-form">
+        <div>
+            <label for="media-files">Select Media Files:</label>
+            <input type="file" id="media-files" name="files" accept="image/jpeg, image/png, video/mp4" multiple>
+            <small>Select multiple images or one video.</small>
+        </div>
+        <div>
+            <label for="prompt">Optional Prompt:</label>
+            <input type="text" id="prompt" name="prompt" placeholder="e.g., focus on the sunset">
+        </div>
+        <button type="submit">Analyze Media</button>
+    </form>
+
+    <div id="loading" style="display: none;">
+        <p>Analyzing media... Please wait.</p>
+        </div>
+
+    <div id="results">
+        <h2>Generated Captions:</h2>
+        <div id="english-caption">
+            <h3>English:</h3>
+            <p>...</p>
+        </div>
+        <div id="thai-caption">
+            <h3>Thai:</h3>
+            <p>...</p>
+        </div>
+    </div>
+
+    <div id="error-message" style="color: red; display: none;">
+        <p>An error occurred.</p>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html> 
