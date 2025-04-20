@@ -30,6 +30,7 @@ from utils.story_generation import (
     parse_openai_response
 )
 from utils.prompts import STORY_GENERATION_PROMPT
+from utils.api_docs import generate_api_docs_html
 
 # --- Configuration & Setup --- 
 
@@ -157,6 +158,26 @@ async def analyze_media_endpoint(
         # Catch any other unexpected errors during endpoint processing
         logger.exception("An unexpected error occurred in the /analyze endpoint.")
         raise HTTPException(status_code=500, detail=f"An unexpected server error occurred: {str(e)}")
+
+@app.get("/api/docs", response_class=HTMLResponse)
+async def api_documentation():
+    """
+    Serves API documentation with detailed endpoint information, 
+    request parameters, and example responses.
+    """
+    try:
+        api_docs_html_path = SCRIPT_DIR / "static" / "api_docs.html"
+        if not api_docs_html_path.is_file():
+            logger.warning(f"API documentation HTML file not found at: {api_docs_html_path}")
+            # Generate a basic documentation page if the file doesn't exist
+            return HTMLResponse(content=generate_api_docs_html())
+        
+        async with aiofiles.open(api_docs_html_path, mode='r') as f:
+            content = await f.read()
+        return HTMLResponse(content=content)
+    except Exception as e:
+        logger.exception(f"Error serving API documentation: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error: Could not load API documentation.")
 
 if __name__ == "__main__":
     import uvicorn

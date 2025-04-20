@@ -15,11 +15,13 @@ FastAPI ImgStroy is a web application that analyzes uploaded media (images or vi
 - Dual language output (English and Thai)
 - Token usage tracking
 - Web interface for easy interaction
+- Detailed API documentation
 
 ## Prerequisites
 
 - Python 3.8+
 - OpenAI API key
+- FFmpeg (for video processing)
 
 ## Installation
 
@@ -34,7 +36,12 @@ FastAPI ImgStroy is a web application that analyzes uploaded media (images or vi
    pip install -r requirements.txt
    ```
 
-3. Create a `.env` file in the project root with your OpenAI API key:
+3. Install FFmpeg (required for video processing):
+   - **Windows**: Download from [FFmpeg.org](https://ffmpeg.org/download.html) and add to PATH
+   - **macOS**: `brew install ffmpeg`
+   - **Linux**: `sudo apt-get install ffmpeg`
+
+4. Create a `.env` file in the project root with your OpenAI API key:
    ```
    OPENAI_API_KEY=your_openai_api_key
    # OPENAI_ORG_ID=your_org_id  # Optional: Uncomment if using organization ID
@@ -63,16 +70,40 @@ FastAPI ImgStroy is a web application that analyzes uploaded media (images or vi
 
 3. Upload media files and optionally provide a prompt to guide the story generation.
 
+4. View the detailed API documentation at:
+   ```
+   http://localhost:8000/api/docs
+   ```
+
 ## API Endpoints
 
-- `GET /`: Serves the web interface
-- `POST /analyze/`: Processes uploaded media files
+The application provides the following endpoints:
+
+### GET /
+
+Serves the web interface for interacting with the application.
+
+### GET /api/docs
+
+Serves the API documentation with detailed endpoint information, request parameters, and example responses.
 
 ### POST /analyze/
 
+Processes uploaded media files and generates creative stories.
+
 **Request:**
-- `files`: List of files (JPG, PNG, MP4)
-- `prompt` (optional): Text to guide the story generation
+- **Method**: POST
+- **Content-Type**: multipart/form-data
+- **Parameters**:
+  - `files`: Media files to analyze (JPG, PNG images or MP4 video)
+  - `prompt` (optional): Text to guide the story generation
+
+**Example Request (using curl):**
+```bash
+curl -X POST http://localhost:8000/analyze/ \
+  -F "files=@/path/to/your/image.jpg" \
+  -F "prompt=Generate a story about this image in the style of Anthony Bourdain"
+```
 
 **Response:**
 ```json
@@ -86,6 +117,16 @@ FastAPI ImgStroy is a web application that analyzes uploaded media (images or vi
   }
 }
 ```
+
+**Error Responses:**
+
+| Status Code | Description |
+|-------------|-------------|
+| 400 | Bad Request - Invalid file type, file size exceeds limits, or other client errors |
+| 422 | Unprocessable Entity - The server understands the content type but was unable to process the contained instructions |
+| 429 | Too Many Requests - Rate limit exceeded with the OpenAI API |
+| 500 | Internal Server Error - Something went wrong on the server side |
+| 503 | Service Unavailable - The OpenAI API is temporarily unavailable |
 
 ## Project Structure
 
@@ -108,6 +149,32 @@ fastapi-imgStroy/
     ├── prompts.py        # Prompt templates
     └── story_generation.py # Story generation functions
 ```
+
+## Environment Variables
+
+The application uses the following environment variables:
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| OPENAI_API_KEY | Yes | Your OpenAI API key for accessing the API |
+| OPENAI_ORG_ID | No | Optional: Your OpenAI organization ID if you're using one |
+
+## Troubleshooting
+
+### Common Issues
+
+1. **"OpenAI API key not found" error**
+   - Make sure your `.env` file is in the project root directory
+   - Check that the OPENAI_API_KEY variable is set correctly
+   - Restart the server after making changes to the `.env` file
+
+2. **FFmpeg related errors**
+   - Ensure FFmpeg is installed and accessible in your PATH
+   - Try running `ffmpeg -version` in your terminal to verify the installation
+
+3. **File upload issues**
+   - Check that your files are of the supported types (JPG, PNG, MP4)
+   - Ensure that image files are under 10MB and video files are under 50MB
 
 ## Future Improvements
 

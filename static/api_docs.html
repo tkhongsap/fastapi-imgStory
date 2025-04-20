@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ImgStory - API Documentation</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Additional styles for API docs page */
+        .method {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+            font-size: 0.9rem;
+        }
+        .get {
+            background-color: #61affe;
+            color: white;
+        }
+        .post {
+            background-color: var(--success-color);
+            color: white;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border: 1px solid #edf2f7;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        tr:nth-child(even) {
+            background-color: #f9fafc;
+        }
+        pre {
+            background-color: #f5f7fa;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            overflow-x: auto;
+            border-left: 4px solid var(--primary-color);
+            margin: 1rem 0;
+        }
+        code {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
+        }
+        .endpoint-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.25rem;
+            margin-bottom: 0.75rem;
+        }
+        .section-divider {
+            margin: 2rem 0;
+            border-top: 1px solid #eaeaea;
+        }
+        .notes-box {
+            background-color: #f5f7fa;
+            border-left: 4px solid var(--warning-color);
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1.5rem 0;
+        }
+        .notes-box h4 {
+            color: var(--warning-color);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .error-table td:first-child {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <header class="hero">
+        <div class="hero-content">
+            <h1>ImgStory API</h1>
+            <p class="subtitle">Documentation for the Media Analysis Story Generator API</p>
+        </div>
+    </header>
+
+    <main>
+        <section id="docs-section" class="container">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-book"></i> API Overview</h2>
+                    <p>This API allows you to upload media files and generate creative stories based on visual content</p>
+                </div>
+                <div class="card-body">
+                    <p>The ImgStory API uses OpenAI's vision models to analyze images and videos, generating descriptive stories in both English and Thai languages. Use this documentation to understand how to interact with the API endpoints.</p>
+                    
+                    <div class="notes-box">
+                        <h4><i class="fas fa-lightbulb"></i> Quick Start</h4>
+                        <p>The easiest way to get started is to use the web interface at <a href="/">the homepage</a>. For direct API access, see the endpoint documentation below.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-server"></i> API Endpoints</h2>
+                    <p>Available endpoints for the ImgStory service</p>
+                </div>
+                <div class="card-body">
+                    <div class="endpoint">
+                        <h3 class="endpoint-title"><span class="method get">GET</span> /</h3>
+                        <p>Serves the main HTML interface for the application.</p>
+                        <h4><i class="fas fa-reply"></i> Response</h4>
+                        <p>Returns the HTML page for interacting with the API through a user interface.</p>
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div class="endpoint">
+                        <h3 class="endpoint-title"><span class="method get">GET</span> /api/docs</h3>
+                        <p>Serves the API documentation (this page).</p>
+                        <h4><i class="fas fa-reply"></i> Response</h4>
+                        <p>Returns HTML documentation about API endpoints and usage.</p>
+                    </div>
+
+                    <div class="section-divider"></div>
+                    
+                    <div class="endpoint">
+                        <h3 class="endpoint-title"><span class="method post">POST</span> /analyze/</h3>
+                        <p>Processes uploaded media files and generates creative stories in both English and Thai.</p>
+                        
+                        <h4><i class="fas fa-paper-plane"></i> Request</h4>
+                        <p>This endpoint accepts multipart/form-data with the following parameters:</p>
+                        
+                        <table>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Type</th>
+                                <th>Required</th>
+                                <th>Description</th>
+                            </tr>
+                            <tr>
+                                <td>files</td>
+                                <td>File(s)</td>
+                                <td>Yes</td>
+                                <td>Media files to analyze. Supports JPG, PNG images (multiple files allowed) or a single MP4 video. Maximum file size: 10MB per image, 50MB for video.</td>
+                            </tr>
+                            <tr>
+                                <td>prompt</td>
+                                <td>String</td>
+                                <td>No</td>
+                                <td>Optional text prompt to guide the story generation. If not provided, a default prompt will be used.</td>
+                            </tr>
+                        </table>
+                        
+                        <h4><i class="fas fa-reply"></i> Response</h4>
+                        <p>Returns a JSON object with the following properties:</p>
+                        
+                        <pre><code>{
+  "english": "English language story generated from the media",
+  "thai": "Thai language translation of the story",
+  "token_usage": {
+    "input_tokens": 123,
+    "output_tokens": 456,
+    "total_tokens": 579
+  }
+}</code></pre>
+                        
+                        <h4><i class="fas fa-terminal"></i> Example Request (using curl)</h4>
+                        <pre><code>curl -X POST http://localhost:8000/analyze/ \
+  -F "files=@/path/to/your/image.jpg" \
+  -F "prompt=Generate a story about this image in the style of Anthony Bourdain"</code></pre>
+
+                        <h4><i class="fas fa-code"></i> Example Request (using JavaScript Fetch API)</h4>
+                        <pre><code>const formData = new FormData();
+formData.append('files', imageFile); // From file input
+formData.append('prompt', 'Generate a story about this image in the style of Anthony Bourdain');
+
+fetch('http://localhost:8000/analyze/', {
+  method: 'POST',
+  body: formData
+})
+.then(response => response.json())
+.then(data => {
+  console.log(data.english); // English story
+  console.log(data.thai);    // Thai story
+  console.log(data.token_usage); // Token usage statistics
+})
+.catch(error => console.error('Error:', error));</code></pre>
+                        
+                        <h4><i class="fas fa-exclamation-triangle"></i> Error Responses</h4>
+                        <table class="error-table">
+                            <tr>
+                                <th>Status Code</th>
+                                <th>Description</th>
+                            </tr>
+                            <tr>
+                                <td>400</td>
+                                <td>Bad Request - Invalid file type, file size exceeds limits, or other client errors.</td>
+                            </tr>
+                            <tr>
+                                <td>422</td>
+                                <td>Unprocessable Entity - The server understands the content type but was unable to process the contained instructions.</td>
+                            </tr>
+                            <tr>
+                                <td>429</td>
+                                <td>Too Many Requests - Rate limit exceeded with the OpenAI API.</td>
+                            </tr>
+                            <tr>
+                                <td>500</td>
+                                <td>Internal Server Error - Something went wrong on the server side.</td>
+                            </tr>
+                            <tr>
+                                <td>503</td>
+                                <td>Service Unavailable - The OpenAI API is temporarily unavailable.</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-info-circle"></i> Usage Notes</h2>
+                    <p>Important information about using the API</p>
+                </div>
+                <div class="card-body">
+                    <h4><i class="fas fa-tachometer-alt"></i> Rate Limiting and Usage</h4>
+                    <p>The application relies on OpenAI's API which has its own rate limits. Please be mindful of the following:</p>
+                    <ul>
+                        <li>There may be limits on the number of requests you can make within a time period</li>
+                        <li>Token usage is tracked and displayed in the response</li>
+                        <li>Processing large video files may take more time than images</li>
+                        <li>For optimal performance, resize large images before uploading</li>
+                    </ul>
+
+                    <h4><i class="fas fa-bug"></i> Troubleshooting</h4>
+                    <p>If you encounter issues using the API, check the following:</p>
+                    <ul>
+                        <li>Ensure you're using supported file formats (JPG, PNG for images, MP4 for video)</li>
+                        <li>Check file size limits (10MB for images, 50MB for video)</li>
+                        <li>For server-side issues, check the application logs</li>
+                        <li>If you encounter rate limiting, wait and try again later</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 ImgStory | Media Analysis Story Generator</p>
+        </div>
+    </footer>
+</body>
+</html> 

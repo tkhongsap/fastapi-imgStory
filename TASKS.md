@@ -62,10 +62,10 @@ Based on the PRD (Product Requirements Document) for the PoC.
     - [ ] Implement proper file cleanup after processing
     - [ ] Add caching for frequent requests if applicable
     - [ ] Optimize image resizing before sending to API
-- [ ] Create documentation
-    - [ ] Create README.md with setup and usage instructions
-    - [ ] Document API endpoints and parameters
-    - [ ] Add example requests and responses
+- [x] Create documentation
+    - [x] Create README.md with setup and usage instructions
+    - [x] Document API endpoints and parameters
+    - [x] Add example requests and responses
 - [ ] Deploy application (if applicable)
     - [ ] Prepare for production deployment
     - [ ] Configure environment for production 
