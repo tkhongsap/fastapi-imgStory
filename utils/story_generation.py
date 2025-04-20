@@ -80,7 +80,7 @@ def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, 
         user_prompt: Optional user prompt to guide the story generation
         
     Returns:
-        Dict with 'english', 'thai', 'input_tokens', and 'output_tokens' fields
+        Dict with 'english', 'thai', 'input_tokens', 'output_tokens', 'cost_usd', and 'cost_thb' fields
         
     Raises:
         RuntimeError: If OpenAI client is not initialized
@@ -89,6 +89,11 @@ def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, 
     logger.info("Generating story from single image (Responses API).")
     if openai_client.get_client() is None:
         raise RuntimeError("OpenAI client not initialized")
+
+    # Cost constants for gpt-4.1-mini (per 1M tokens)
+    INPUT_COST_USD_PER_MILLION = 0.40
+    OUTPUT_COST_USD_PER_MILLION = 1.60
+    USD_TO_THB_RATE = 35.0
 
     input_data = [
         {
@@ -139,12 +144,21 @@ def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, 
             if not parsed_response:
                 raise ValueError("No output_text found in OpenAI response")
         
-        # Add token usage to the response
+        # Calculate costs
+        input_cost_usd = (input_tokens / 1000000) * INPUT_COST_USD_PER_MILLION
+        output_cost_usd = (output_tokens / 1000000) * OUTPUT_COST_USD_PER_MILLION
+        total_cost_usd = input_cost_usd + output_cost_usd
+        total_cost_thb = total_cost_usd * USD_TO_THB_RATE
+        
+        # Add token usage and cost to the response
         parsed_response["input_tokens"] = input_tokens
         parsed_response["output_tokens"] = output_tokens
+        parsed_response["cost_usd"] = round(total_cost_usd, 6)
+        parsed_response["cost_thb"] = round(total_cost_thb, 6)
         
-        # Log token usage for debugging
+        # Log token usage and cost for debugging
         logger.info(f"Token usage - Input: {input_tokens}, Output: {output_tokens}")
+        logger.info(f"Cost - USD: ${total_cost_usd:.6f}, THB: ฿{total_cost_thb:.6f}")
         
         return parsed_response
     except Exception as e:
@@ -160,7 +174,7 @@ def generate_story_from_multiple_images(base64_images: List[str], user_prompt: s
         user_prompt: Optional user prompt to guide the story generation
         
     Returns:
-        Dict with 'english', 'thai', 'input_tokens', and 'output_tokens' fields
+        Dict with 'english', 'thai', 'input_tokens', 'output_tokens', 'cost_usd', and 'cost_thb' fields
         
     Raises:
         RuntimeError: If OpenAI client is not initialized
@@ -169,6 +183,11 @@ def generate_story_from_multiple_images(base64_images: List[str], user_prompt: s
     logger.info(f"Generating story from {len(base64_images)} images (Responses API).")
     if openai_client.get_client() is None:
         raise RuntimeError("OpenAI client not initialized")
+
+    # Cost constants for gpt-4.1-mini (per 1M tokens)
+    INPUT_COST_USD_PER_MILLION = 0.40
+    OUTPUT_COST_USD_PER_MILLION = 1.60
+    USD_TO_THB_RATE = 35.0
 
     user_content: List[Dict[str, Any]] = [
         {"type": "input_text", "text": user_prompt or "Create an engaging caption that connects these images and tells their collective story."}
@@ -217,12 +236,21 @@ def generate_story_from_multiple_images(base64_images: List[str], user_prompt: s
             if not parsed_response:
                 raise ValueError("No output_text found in OpenAI response")
         
-        # Add token usage to the response
+        # Calculate costs
+        input_cost_usd = (input_tokens / 1000000) * INPUT_COST_USD_PER_MILLION
+        output_cost_usd = (output_tokens / 1000000) * OUTPUT_COST_USD_PER_MILLION
+        total_cost_usd = input_cost_usd + output_cost_usd
+        total_cost_thb = total_cost_usd * USD_TO_THB_RATE
+        
+        # Add token usage and cost to the response
         parsed_response["input_tokens"] = input_tokens
         parsed_response["output_tokens"] = output_tokens
+        parsed_response["cost_usd"] = round(total_cost_usd, 6)
+        parsed_response["cost_thb"] = round(total_cost_thb, 6)
         
-        # Log token usage for debugging
+        # Log token usage and cost for debugging
         logger.info(f"Token usage - Input: {input_tokens}, Output: {output_tokens}")
+        logger.info(f"Cost - USD: ${total_cost_usd:.6f}, THB: ฿{total_cost_thb:.6f}")
         
         return parsed_response
     except Exception as e:
@@ -239,7 +267,7 @@ def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -
         user_prompt: Optional user prompt to guide the story generation
         
     Returns:
-        Dict with 'english', 'thai', 'input_tokens', and 'output_tokens' fields
+        Dict with 'english', 'thai', 'input_tokens', 'output_tokens', 'cost_usd', and 'cost_thb' fields
     """
     import os  # Import here to avoid circular imports
     
@@ -247,6 +275,11 @@ def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -
     
     if openai_client.get_client() is None:
         raise RuntimeError("OpenAI client not initialized")
+    
+    # Cost constants for gpt-4.1-mini (per 1M tokens)
+    INPUT_COST_USD_PER_MILLION = 0.40
+    OUTPUT_COST_USD_PER_MILLION = 1.60
+    USD_TO_THB_RATE = 35.0
     
     # Prepare metadata description
     filename = video_details.get('filename', 'Unknown file')
@@ -313,12 +346,21 @@ def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -
             if not parsed_response:
                 raise ValueError("No output_text found in OpenAI response")
         
-        # Add token usage to the response
+        # Calculate costs
+        input_cost_usd = (input_tokens / 1000000) * INPUT_COST_USD_PER_MILLION
+        output_cost_usd = (output_tokens / 1000000) * OUTPUT_COST_USD_PER_MILLION
+        total_cost_usd = input_cost_usd + output_cost_usd
+        total_cost_thb = total_cost_usd * USD_TO_THB_RATE
+        
+        # Add token usage and cost to the response
         parsed_response["input_tokens"] = input_tokens
         parsed_response["output_tokens"] = output_tokens
+        parsed_response["cost_usd"] = round(total_cost_usd, 6)
+        parsed_response["cost_thb"] = round(total_cost_thb, 6)
         
-        # Log token usage for debugging
+        # Log token usage and cost for debugging
         logger.info(f"Token usage from video metadata - Input: {input_tokens}, Output: {output_tokens}")
+        logger.info(f"Cost - USD: ${total_cost_usd:.6f}, THB: ฿{total_cost_thb:.6f}")
         
         return parsed_response
         
@@ -329,5 +371,7 @@ def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -
             "english": f"Video analysis: {metadata_description}",
             "thai": f"การวิเคราะห์วิดีโอ: {metadata_description}",
             "input_tokens": 0,  # Placeholder for error case
-            "output_tokens": 0  # Placeholder for error case
+            "output_tokens": 0,  # Placeholder for error case
+            "cost_usd": 0.0,     # Placeholder for error case
+            "cost_thb": 0.0      # Placeholder for error case
         } 

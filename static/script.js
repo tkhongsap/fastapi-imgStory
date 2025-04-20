@@ -10,8 +10,15 @@ document.getElementById('upload-form').addEventListener('submit', async function
     const thaiCaptionP = document.querySelector('#thai-caption p');
     const inputTokensSpan = document.querySelector('#input-tokens');
     const outputTokensSpan = document.querySelector('#output-tokens');
+    const costUsdSpan = document.querySelector('#cost-usd');
+    const costThbSpan = document.querySelector('#cost-thb');
     const errorDiv = document.getElementById('error-message');
     const errorP = document.querySelector('#error-message p');
+
+    // Cost constants for gpt-4.1-mini (per 1M tokens)
+    const INPUT_COST_USD_PER_MILLION = 0.40;
+    const OUTPUT_COST_USD_PER_MILLION = 1.60;
+    const USD_TO_THB_RATE = 35.0;
 
     // Basic validation: Ensure at least one file is selected
     if (!filesInput.files || filesInput.files.length === 0) {
@@ -29,6 +36,8 @@ document.getElementById('upload-form').addEventListener('submit', async function
     thaiCaptionP.textContent = '...';
     inputTokensSpan.textContent = '0';
     outputTokensSpan.textContent = '0';
+    costUsdSpan.textContent = '0.00';
+    costThbSpan.textContent = '0.00';
 
     try {
         const response = await fetch('/analyze/', {
@@ -57,9 +66,23 @@ document.getElementById('upload-form').addEventListener('submit', async function
         englishCaptionP.textContent = data.english || 'No English caption generated.';
         thaiCaptionP.textContent = data.thai || 'No Thai caption generated.';
         
+        // Get token counts
+        const inputTokens = data.input_tokens || 0;
+        const outputTokens = data.output_tokens || 0;
+        
         // Display token usage
-        inputTokensSpan.textContent = data.input_tokens || '0';
-        outputTokensSpan.textContent = data.output_tokens || '0';
+        inputTokensSpan.textContent = inputTokens;
+        outputTokensSpan.textContent = outputTokens;
+        
+        // Calculate costs
+        const inputCostUsd = (inputTokens / 1000000) * INPUT_COST_USD_PER_MILLION;
+        const outputCostUsd = (outputTokens / 1000000) * OUTPUT_COST_USD_PER_MILLION;
+        const totalCostUsd = inputCostUsd + outputCostUsd;
+        const totalCostThb = totalCostUsd * USD_TO_THB_RATE;
+        
+        // Display costs with 4 decimal places for small amounts
+        costUsdSpan.textContent = totalCostUsd.toFixed(4);
+        costThbSpan.textContent = totalCostThb.toFixed(4);
         
         resultsDiv.style.display = 'block';
 
