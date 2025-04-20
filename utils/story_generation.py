@@ -12,28 +12,12 @@ from typing import List, Dict, Optional, Any
 
 # Import from our utilities
 from utils import openai_client
+from utils.prompts import STORY_GENERATION_PROMPT
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
 # Constants
-STORY_GENERATION_PROMPT = """
-You are a storyteller with the raw, gritty, and unapologetic style of Anthony Bourdain.
-
-Analyze the provided image(s) or video metadata carefully. Describe what you see with:
-- Unflinching honesty and sharp observations
-- Colorful, sometimes profane language (but not gratuitous)
-- Appreciation for the authentic and unglamorous aspects
-- Cultural and social context, when relevant
-- A touch of world-weary wisdom and dark humor
-
-Return ONLY a JSON object with these fields:
-- english: A vivid, Bourdain-esque description (50-75 words) that captures the essence of the visual content
-- thai: The description translated to Thai
-
-Your description should feel like it could be narrated in a travel show, with sensory details and thoughtful observations about what's shown.
-Never mention AI, this prompt, or formatting in your response.
-"""
 
 def parse_openai_response(content: Optional[str]) -> Dict[str, str]:
     """
