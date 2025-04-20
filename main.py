@@ -20,6 +20,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from openai import OpenAI, OpenAIError, APIStatusError, APIConnectionError, AuthenticationError
 
+# Import OpenAI client utilities
+from utils import openai_client
+
 # --- Configuration & Setup --- 
 
 # Get the directory where main.py is located
@@ -45,85 +48,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 UPLOAD_DIR = SCRIPT_DIR / "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# OpenAI Configuration (Now reliably loaded from .env if present and overriding)
-API_KEY = os.getenv("OPENAI_API_KEY")
-ORG_ID = os.getenv("OPENAI_ORG_ID")
-
-# Model selection (similar logic to TS example)
-# Use gpt-4.1-mini as requested in custom instructions
-VISION_MODEL = "gpt-4.1-mini" 
-FALLBACK_VISION_MODEL = "gpt-4.1-mini" # Fallback if preferred is unavailable, but mini should be available
-active_vision_model = VISION_MODEL
-using_fallback_mode = False # Flag if API key is invalid or models unavailable
-
-# Initialize OpenAI client (will be done after validation)
-client: Optional[OpenAI] = None
-
-# Validate API Key and setup OpenAI client
-def initialize_openai_client():
-    global client, active_vision_model, using_fallback_mode
-
-    if not API_KEY:
-        logger.error("❌ OPENAI_API_KEY environment variable is not set. Falling back.")
-        using_fallback_mode = True
-        return
-
-    key_preview = f"{API_KEY[:7]}...{API_KEY[-4:]}"
-    is_project_based_key = API_KEY.startswith("sk-proj-")
-    logger.info(f"OpenAI API key detected: {key_preview} ({'project-based' if is_project_based_key else 'standard'})")
-
-    try:
-        client = OpenAI(
-            api_key=API_KEY,
-            organization=ORG_ID, # Will be None if not set
-            default_headers={"OpenAI-Beta": "assistants=v1"} # As per TS example
-        )
-
-        # Test API key with a simple call
-        logger.info(f"Attempting to validate API key and check model: {VISION_MODEL}")
-        # Using a simple, low-cost call for validation
-        client.models.retrieve(VISION_MODEL) 
-        logger.info(f"✅ OpenAI API key validated successfully. Using vision model: {VISION_MODEL}")
-        active_vision_model = VISION_MODEL
-        using_fallback_mode = False
-
-    except AuthenticationError as e:
-        logger.error(f"❌ AUTHENTICATION ERROR: Invalid OpenAI API key or insufficient permissions. Status: {e.status_code}. Message: {e.message}")
-        if is_project_based_key:
-            logger.error("Project-based keys (sk-proj-*) may have limited permissions. Check model access in your OpenAI project settings.")
-        else:
-            logger.error("Verify your API key at https://platform.openai.com/account/api-keys")
-        client = None
-        using_fallback_mode = True
-    except APIStatusError as e:
-        # Handle cases like model not found or other API errors during validation
-        logger.error(f"❌ API ERROR during validation: Status {e.status_code}. Message: {e.message}")
-        if e.code == 'model_not_found':
-            logger.warning(f"Model '{VISION_MODEL}' not found or not accessible with this key. Trying fallback '{FALLBACK_VISION_MODEL}'.")
-            try:
-                client.models.retrieve(FALLBACK_VISION_MODEL)
-                logger.info(f"✅ Fallback model '{FALLBACK_VISION_MODEL}' validated. Using fallback.")
-                active_vision_model = FALLBACK_VISION_MODEL
-                using_fallback_mode = False
-            except Exception as fallback_e:
-                logger.error(f"❌ Fallback model '{FALLBACK_VISION_MODEL}' also failed validation: {fallback_e}. Enabling fallback mode.")
-                client = None
-                using_fallback_mode = True
-        else:
-             client = None
-             using_fallback_mode = True # Fallback for other API errors
-    except APIConnectionError as e:
-        logger.error(f"❌ CONNECTION ERROR: Could not connect to OpenAI API. {e}")
-        client = None
-        using_fallback_mode = True
-    except Exception as e:
-        logger.error(f"❌ An unexpected error occurred during OpenAI client initialization: {e}")
-        client = None
-        using_fallback_mode = True
-
-# Initialize on startup
-initialize_openai_client()
-
 # --- FastAPI App Setup --- 
 app = FastAPI(title="Media Analysis Story Generator API")
 
@@ -147,10 +71,19 @@ app.add_middleware(
 # Mount static files (CSS, JS)
 app.mount("/static", StaticFiles(directory=SCRIPT_DIR / "static"), name="static")
 
-# --- OpenAI Interaction Functions --- 
+# --- FastAPI Lifecycle Events ---
 
-# (Existing functions: initialize_openai_client, parse_openai_response, etc.)
-# ...
+@app.on_event("startup")
+async def startup_event():
+    """Initialize resources on application startup"""
+    logger.info("Application starting up, initializing OpenAI client...")
+    openai_client.initialize_openai_client()
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources on application shutdown"""
+    logger.info("Application shutting down, cleaning up resources...")
+    openai_client.cleanup_client()
 
 # --- API Endpoints --- 
 
@@ -213,14 +146,16 @@ async def analyze_media(files: List[UploadFile], prompt: str) -> Dict[str, str]:
     """
     logger.info(f"Received request for analysis. Files: {[f.filename for f in files]}, Prompt: '{prompt}'")
     
-    # Ensure client is initialized (it might not be if API key was invalid on startup)
-    if using_fallback_mode or client is None:
-        logger.warning("OpenAI client not available or in fallback mode. Returning fallback response.")
-        # Return a specific fallback response structure
-        return { 
-            "english": "Analysis service is currently unavailable due to configuration issues.",
-            "thai": "บริการวิเคราะห์ไม่พร้อมใช้งานในขณะนี้เนื่องจากปัญหาการกำหนดค่า"
-        }
+    # Ensure client is initialized or try to reinitialize if needed
+    if openai_client.is_fallback_mode() or openai_client.get_client() is None:
+        # Try to reinitialize the client one more time
+        if not openai_client.reinitialize_client_if_needed():
+            logger.warning("OpenAI client still not available or in fallback mode. Returning fallback response.")
+            # Return a specific fallback response structure
+            return { 
+                "english": "Analysis service is currently unavailable due to configuration issues.",
+                "thai": "บริการวิเคราะห์ไม่พร้อมใช้งานในขณะนี้เนื่องจากปัญหาการกำหนดค่า"
+            }
 
     if not files:
         logger.warning("No files provided in the request to analyze_media.")
@@ -575,7 +510,7 @@ def parse_openai_response(content: Optional[str]) -> Dict[str, str]:
 def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, str]:
     """Generates story from a single base64 encoded image using the OpenAI Responses API."""
     logger.info("Generating story from single image (Responses API).")
-    if client is None:
+    if openai_client.get_client() is None:
         raise RuntimeError("OpenAI client not initialized")
 
     input_data = [
@@ -589,8 +524,8 @@ def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, 
     ]
 
     try:
-        response = client.responses.create(
-            model=active_vision_model,
+        response = openai_client.get_client().responses.create(
+            model=openai_client.get_active_model(),
             input=input_data,
             instructions=STORY_GENERATION_PROMPT
             # max_tokens is not supported in Responses API; control output length via prompt/instructions
@@ -611,7 +546,7 @@ def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, 
 def generate_story_from_multiple_images(base64_images: List[str], user_prompt: str) -> Dict[str, str]:
     """Generates story from multiple base64 encoded images using the OpenAI Responses API."""
     logger.info(f"Generating story from {len(base64_images)} images (Responses API).")
-    if client is None:
+    if openai_client.get_client() is None:
         raise RuntimeError("OpenAI client not initialized")
 
     user_content: List[Dict[str, Any]] = [
@@ -625,8 +560,8 @@ def generate_story_from_multiple_images(base64_images: List[str], user_prompt: s
     ]
 
     try:
-        response = client.responses.create(
-            model=active_vision_model,
+        response = openai_client.get_client().responses.create(
+            model=openai_client.get_active_model(),
             input=input_data,
             instructions=STORY_GENERATION_PROMPT
             # max_tokens is not supported in Responses API; control output length via prompt/instructions
@@ -677,8 +612,8 @@ def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -
     
     try:
         # Use the Responses API to generate a story based on metadata
-        response = client.responses.create(
-            model=active_vision_model,
+        response = openai_client.get_client().responses.create(
+            model=openai_client.get_active_model(),
             input=[
                 {
                     "role": "user", 
