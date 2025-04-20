@@ -3,62 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Analysis Story Generator</title>
+    <title>ImgStory - Media Analysis Story Generator</title>
     <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-    <h1>Media Analysis Story Generator (Prototype)</h1>
-    <p>Upload one or more images (JPG, PNG) or a single video (MP4) to generate a social media caption.</p>
+    <header class="hero">
+        <div class="hero-content">
+            <h1>ImgStory</h1>
+            <p class="subtitle">AI-powered caption generator for your photos and videos</p>
+            <div class="hero-cta">
+                <a href="#upload-section" class="cta-button">Get Started <i class="fas fa-arrow-right"></i></a>
+            </div>
+        </div>
+    </header>
 
-    <form id="upload-form">
-        <div>
-            <label for="media-files">Select Media Files:</label>
-            <input type="file" id="media-files" name="files" accept="image/jpeg, image/png, video/mp4" multiple>
-            <small>Select multiple images or one video.</small>
-        </div>
-        <div>
-            <label for="prompt">Optional Prompt:</label>
-            <input type="text" id="prompt" name="prompt" placeholder="e.g., focus on the sunset">
-        </div>
-        <button type="submit">Analyze Media</button>
-    </form>
+    <main>
+        <section id="upload-section" class="container">
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-cloud-upload-alt"></i> Upload Media</h2>
+                    <p>Upload images (JPG, PNG) or video (MP4) to generate compelling captions</p>
+                </div>
+                <div class="card-body">
+                    <form id="upload-form">
+                        <div class="upload-area">
+                            <label for="media-files" class="file-input-label">
+                                <i class="fas fa-file-image"></i>
+                                <span>Select Media Files</span>
+                            </label>
+                            <input type="file" id="media-files" name="files" accept="image/jpeg, image/png, video/mp4" multiple>
+                            <p class="file-note"><i class="fas fa-info-circle"></i> Select multiple images or one video</p>
+                        </div>
+                        <button type="submit" class="submit-button"><i class="fas fa-magic"></i> Generate Captions</button>
+                    </form>
+                </div>
+            </div>
 
-    <div id="loading" style="display: none;">
-        <p>Analyzing media... Please wait.</p>
-        </div>
+            <div id="loading" class="card">
+                <div class="spinner"></div>
+                <p>Analyzing your media...</p>
+            </div>
 
-    <div id="results">
-        <h2>Generated Captions:</h2>
-        <div id="english-caption">
-            <h3>English:</h3>
-            <p>...</p>
-        </div>
-        <div id="thai-caption">
-            <h3>Thai:</h3>
-            <p>...</p>
-        </div>
-        <div id="token-usage">
-            <h3>Token Usage:</h3>
-            <table style="width: 100%; border-collapse: collapse; font-size: 0.9em;">
-                <tr>
-                    <td style="width: 30%;">Input Tokens:</td>
-                    <td style="width: 20%;"><span id="input-tokens" style="color: #0066cc; font-weight: bold;">0</span></td>
-                    <td style="width: 30%;">Cost (USD):</td>
-                    <td style="width: 20%;"><span id="cost-usd" style="color: #006633; font-weight: bold;">0.00</span></td>
-                </tr>
-                <tr>
-                    <td>Output Tokens:</td>
-                    <td><span id="output-tokens" style="color: #cc6600; font-weight: bold;">0</span></td>
-                    <td>Cost (THB):</td>
-                    <td><span id="cost-thb" style="color: #006633; font-weight: bold;">0.00</span></td>
-                </tr>
-            </table>
-        </div>
-    </div>
+            <div id="results" class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-comment-dots"></i> Generated Captions</h2>
+                </div>
+                <div class="card-body">
+                    <div class="caption-container">
+                        <div id="english-caption" class="caption-box">
+                            <h3><i class="fas fa-language"></i> English</h3>
+                            <div class="caption-content">
+                                <p>...</p>
+                                <button class="copy-btn" data-target="english-caption"><i class="fas fa-copy"></i></button>
+                            </div>
+                        </div>
+                        
+                        <div id="thai-caption" class="caption-box">
+                            <h3><i class="fas fa-globe-asia"></i> Thai</h3>
+                            <div class="caption-content">
+                                <p>...</p>
+                                <button class="copy-btn" data-target="thai-caption"><i class="fas fa-copy"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="token-usage" class="token-usage">
+                        <h3><i class="fas fa-chart-pie"></i> AI Usage Statistics</h3>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <span class="stat-label">Input Tokens</span>
+                                <span id="input-tokens" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Output Tokens</span>
+                                <span id="output-tokens" class="stat-value">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Cost (USD)</span>
+                                <span id="cost-usd" class="stat-value">$0.00</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Cost (THB)</span>
+                                <span id="cost-thb" class="stat-value">฿0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <div id="error-message" style="color: red; display: none;">
-        <p>An error occurred.</p>
-    </div>
+            <div id="error-message" class="card error-card">
+                <i class="fas fa-exclamation-circle"></i>
+                <p>An error occurred.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2023 ImgStory | Media Analysis Story Generator</p>
+        </div>
+    </footer>
 
     <script src="/static/script.js"></script>
 </body>
