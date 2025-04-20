@@ -130,11 +130,14 @@ async def read_root(request: Request):
 
 @app.post("/analyze/")
 async def analyze_media_endpoint(
-    files: List[UploadFile] = File(...),
+    files: List[UploadFile] = File(..., description="Media files (JPG, PNG images or MP4 video)"),
     prompt: Optional[str] = Form(None) # Make prompt optional
 ):
     """
     Endpoint to receive media files and an optional prompt for analysis.
+    Supports JPG, PNG images (multiple allowed) or a single MP4 video.
+    Maximum file size: 5MB per image, 50MB for video.
+    
     Delegates the core logic to the analyze_media function.
     """
     try:

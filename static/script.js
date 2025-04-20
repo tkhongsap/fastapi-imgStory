@@ -64,6 +64,59 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateFileInputUI(files) {
         if (files && files.length > 0) {
+            // Validate files
+            const maxImageSize = 5 * 1024 * 1024; // 5MB in bytes
+            const maxVideoSize = 50 * 1024 * 1024; // 50MB in bytes
+            const allowedImageTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            const allowedVideoTypes = ['video/mp4'];
+            let hasErrors = false;
+            let errorMessage = '';
+            
+            // Check if we have a video or images
+            const hasVideo = Array.from(files).some(file => allowedVideoTypes.includes(file.type));
+            
+            // Make sure we don't have both video and images
+            if (hasVideo && files.length > 1) {
+                errorMessage = 'Please upload either a single video or multiple images, not both.';
+                hasErrors = true;
+            } else if (hasVideo) {
+                // Check video size
+                const videoFile = Array.from(files).find(file => allowedVideoTypes.includes(file.type));
+                if (videoFile.size > maxVideoSize) {
+                    errorMessage = `Video file '${videoFile.name}' is too large. Maximum size is 50MB.`;
+                    hasErrors = true;
+                }
+            } else {
+                // Check image types and sizes
+                const invalidFiles = Array.from(files).filter(file => !allowedImageTypes.includes(file.type));
+                if (invalidFiles.length > 0) {
+                    const fileNames = invalidFiles.map(f => f.name).join(', ');
+                    errorMessage = `Unsupported file type(s): ${fileNames}. Only JPG and PNG images are supported.`;
+                    hasErrors = true;
+                } else {
+                    // Check image sizes
+                    const oversizedFiles = Array.from(files).filter(file => file.size > maxImageSize);
+                    if (oversizedFiles.length > 0) {
+                        const fileNames = oversizedFiles.map(f => f.name).join(', ');
+                        errorMessage = `File(s) too large: ${fileNames}. Maximum size per image is 5MB.`;
+                        hasErrors = true;
+                    }
+                }
+            }
+            
+            if (hasErrors) {
+                // Display error
+                errorP.textContent = errorMessage;
+                errorDiv.style.display = 'block';
+                fileInput.value = ''; // Reset file input
+                fileInputLabel.textContent = 'Choose Files';
+                fileNote.innerHTML = '<i class="fas fa-info-circle"></i> Select multiple images or one video';
+                // Scroll to error message
+                errorDiv.scrollIntoView({ behavior: 'smooth' });
+                return;
+            }
+            
+            // If validation passes, update UI
             const fileCount = files.length;
             fileInputLabel.textContent = `${fileCount} file${fileCount > 1 ? 's' : ''} selected`;
             

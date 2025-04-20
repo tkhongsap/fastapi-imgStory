@@ -39,6 +39,11 @@ Based on the PRD (Product Requirements Document) for the PoC.
     - [x] Add more specific error types for different failure scenarios
     - [x] Handle OpenAI API rate limiting and quotas
     - [x] Add retry functionality with user-friendly error messages
+- [x] Add file type and size validation
+    - [x] Implement server-side validation for allowed file types (JPG, PNG, MP4)
+    - [x] Add file size limits to prevent overly large uploads
+    - [x] Provide clear error messages for invalid files
+    - [x] Add frontend validation to prevent invalid uploads
 
 ## In Progress Tasks
 - [ ] Test backend endpoints thoroughly
@@ -49,10 +54,6 @@ Based on the PRD (Product Requirements Document) for the PoC.
     - [x] Test error handling scenarios
 
 ## Upcoming Tasks
-- [ ] Add file type and size validation
-    - [ ] Implement server-side validation for allowed file types (JPG, PNG, MP4)
-    - [ ] Add file size limits to prevent overly large uploads
-    - [ ] Provide clear error messages for invalid files
 - [ ] Improve video processing capabilities
     - [ ] Add thumbnail generation for videos
     - [ ] Extract and analyze multiple frames for better video understanding

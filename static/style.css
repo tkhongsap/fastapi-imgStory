@@ -238,6 +238,21 @@ input[type="file"] {
     gap: 0.3rem;
 }
 
+.file-limits {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+    color: var(--warning-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+}
+
+.file-limits i {
+    font-size: 0.9rem;
+    color: var(--warning-color);
+}
+
 .submit-button {
     width: 100%;
     padding: 1rem;
