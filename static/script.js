@@ -16,12 +16,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const fileNote = document.querySelector('.file-note');
     const uploadArea = document.querySelector('.upload-area');
     const retryButton = document.getElementById('retry-button');
+    const previewContainer = document.getElementById('preview-container');
+    const previewContent = document.getElementById('preview-content');
 
     // Cost constants for gpt-4.1-mini (per 1M tokens)
     const INPUT_COST_USD_PER_MILLION = 0.40;
     const OUTPUT_COST_USD_PER_MILLION = 1.60;
     const USD_TO_THB_RATE = 35.0;
-
+    
+    // Files container to keep track of selected files
+    let selectedFiles = new DataTransfer();
+    
     // Drag and drop functionality
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         uploadArea.addEventListener(eventName, preventDefaults, false);
@@ -52,17 +57,92 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function handleDrop(e) {
         const dt = e.dataTransfer;
-        const files = dt.files;
-        fileInput.files = files;
-        updateFileInputUI(files);
+        const droppedFiles = dt.files;
+        
+        // Validate the dropped files
+        if (validateFiles(droppedFiles)) {
+            // Update selected files
+            updateSelectedFiles(droppedFiles);
+            
+            // Update UI
+            updateFileInputUI();
+            
+            // Generate previews
+            generatePreviews();
+        }
     }
 
     // File input visual feedback
     fileInput.addEventListener('change', function() {
-        updateFileInputUI(this.files);
+        const files = this.files;
+        
+        // Validate files 
+        if (validateFiles(files)) {
+            // If valid, update DataTransfer object
+            updateSelectedFiles(files);
+            
+            // Update UI
+            updateFileInputUI();
+            
+            // Generate previews
+            generatePreviews();
+        }
     });
     
-    function updateFileInputUI(files) {
+    function updateSelectedFiles(newFiles) {
+        // Clear the DataTransfer object if we're uploading a video
+        // (since we only allow either multiple images OR one video)
+        if (newFiles.length === 1 && newFiles[0].type.startsWith('video/')) {
+            selectedFiles = new DataTransfer();
+        }
+        
+        // Add each file to our DataTransfer object
+        for (let i = 0; i < newFiles.length; i++) {
+            // Only add the file if it's not already in the list
+            const file = newFiles[i];
+            let isDuplicate = false;
+            
+            for (let j = 0; j < selectedFiles.files.length; j++) {
+                if (selectedFiles.files[j].name === file.name && 
+                    selectedFiles.files[j].size === file.size && 
+                    selectedFiles.files[j].type === file.type) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            
+            if (!isDuplicate) {
+                selectedFiles.items.add(file);
+            }
+        }
+        
+        // Update the file input with our managed files
+        fileInput.files = selectedFiles.files;
+    }
+    
+    function removeFile(fileName) {
+        const newFiles = new DataTransfer();
+        
+        // Add all files except the one to remove
+        for (let i = 0; i < selectedFiles.files.length; i++) {
+            const file = selectedFiles.files[i];
+            if (file.name !== fileName) {
+                newFiles.items.add(file);
+            }
+        }
+        
+        // Update our file list
+        selectedFiles = newFiles;
+        fileInput.files = selectedFiles.files;
+        
+        // Update UI
+        updateFileInputUI();
+        
+        // Regenerate previews
+        generatePreviews();
+    }
+    
+    function validateFiles(files) {
         if (files && files.length > 0) {
             // Validate files
             const maxImageSize = 10 * 1024 * 1024; // 10MB in bytes
@@ -74,9 +154,18 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Check if we have a video or images
             const hasVideo = Array.from(files).some(file => allowedVideoTypes.includes(file.type));
+            const hasExistingVideo = Array.from(selectedFiles.files).some(file => allowedVideoTypes.includes(file.type));
             
-            // Make sure we don't have both video and images
-            if (hasVideo && files.length > 1) {
+            // If we already have images and trying to add a video, or vice versa
+            if (hasVideo && selectedFiles.files.length > 0 && !hasExistingVideo) {
+                errorMessage = 'Cannot mix videos and images. Please clear your selection first.';
+                hasErrors = true;
+            } else if (hasExistingVideo && !hasVideo && selectedFiles.files.length > 0) {
+                errorMessage = 'Cannot mix videos and images. Please clear your selection first.';
+                hasErrors = true;
+            }
+            // Make sure we don't have both video and images in new selection
+            else if (hasVideo && files.length > 1) {
                 errorMessage = 'Please upload either a single video or multiple images, not both.';
                 hasErrors = true;
             } else if (hasVideo) {
@@ -108,21 +197,88 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Display error
                 errorP.textContent = errorMessage;
                 errorDiv.style.display = 'block';
-                fileInput.value = ''; // Reset file input
-                fileInputLabel.textContent = 'Choose Files';
-                fileNote.innerHTML = '<i class="fas fa-info-circle"></i> Select multiple images or one video';
                 // Scroll to error message
                 errorDiv.scrollIntoView({ behavior: 'smooth' });
-                return;
+                return false;
             }
             
-            // If validation passes, update UI
-            const fileCount = files.length;
+            return true;
+        }
+        
+        return false;
+    }
+    
+    function generatePreviews() {
+        // Clear current previews
+        clearPreview();
+        
+        if (selectedFiles.files.length === 0) {
+            previewContainer.style.display = 'none';
+            return;
+        }
+        
+        // Display preview container
+        previewContainer.style.display = 'block';
+        
+        // Generate preview for each file
+        for (let i = 0; i < selectedFiles.files.length; i++) {
+            const file = selectedFiles.files[i];
+            const fileReader = new FileReader();
+            
+            fileReader.onload = function(e) {
+                const fileType = file.type;
+                const fileUrl = e.target.result;
+                const filePreview = document.createElement('div');
+                filePreview.className = 'preview-item';
+                
+                if (fileType.startsWith('image/')) {
+                    // Image preview
+                    filePreview.innerHTML = `
+                        <img src="${fileUrl}" alt="${file.name}">
+                        <button class="remove-item" data-filename="${file.name}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                } else if (fileType.startsWith('video/')) {
+                    // Video preview
+                    filePreview.innerHTML = `
+                        <video controls>
+                            <source src="${fileUrl}" type="${fileType}">
+                            Your browser does not support the video tag.
+                        </video>
+                        <button class="remove-item" data-filename="${file.name}">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    `;
+                }
+                
+                previewContent.appendChild(filePreview);
+                
+                // Add event listener to remove button
+                const removeButton = filePreview.querySelector('.remove-item');
+                removeButton.addEventListener('click', function() {
+                    const fileName = this.getAttribute('data-filename');
+                    removeFile(fileName);
+                });
+            };
+            
+            // Read the file as data URL
+            fileReader.readAsDataURL(file);
+        }
+    }
+    
+    function clearPreview() {
+        previewContent.innerHTML = '';
+    }
+    
+    function updateFileInputUI() {
+        if (selectedFiles.files.length > 0) {
+            const fileCount = selectedFiles.files.length;
             fileInputLabel.textContent = `${fileCount} file${fileCount > 1 ? 's' : ''} selected`;
             
             // Update file note with file names if fewer than 3 files
             if (fileCount <= 3) {
-                const fileNames = Array.from(files)
+                const fileNames = Array.from(selectedFiles.files)
                     .map(file => file.name)
                     .join(', ');
                 fileNote.innerHTML = `<i class="fas fa-check-circle" style="color: var(--success-color);"></i> ${fileNames}`;
@@ -132,6 +288,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             fileInputLabel.textContent = 'Choose Files';
             fileNote.innerHTML = '<i class="fas fa-info-circle"></i> Select multiple images or one video';
+            previewContainer.style.display = 'none';
         }
     }
 
@@ -165,14 +322,20 @@ document.addEventListener('DOMContentLoaded', function() {
     form.addEventListener('submit', async function(event) {
         event.preventDefault(); // Prevent default form submission
 
-        const formData = new FormData(form);
-
         // Basic validation: Ensure at least one file is selected
-        if (!fileInput.files || fileInput.files.length === 0) {
+        if (!selectedFiles.files || selectedFiles.files.length === 0) {
             errorP.textContent = 'Please select at least one media file.';
             errorDiv.style.display = 'block';
             resultsDiv.style.display = 'none'; // Hide results
             return;
+        }
+
+        const formData = new FormData(form);
+        
+        // Replace the form's files with our managed files
+        formData.delete('files'); // Remove the original files
+        for (let i = 0; i < selectedFiles.files.length; i++) {
+            formData.append('files', selectedFiles.files[i]);
         }
 
         // --- Reset UI --- 
@@ -308,9 +471,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Hide error message
         errorDiv.style.display = 'none';
         
-        // Reset file input
+        // Reset file input and selected files
         fileInput.value = '';
-        updateFileInputUI(fileInput.files);
+        selectedFiles = new DataTransfer();
+        updateFileInputUI();
+        clearPreview();
         
         // Scroll back to upload area
         uploadArea.scrollIntoView({ behavior: 'smooth' });
