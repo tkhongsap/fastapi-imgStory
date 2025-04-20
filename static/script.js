@@ -71,8 +71,8 @@ document.getElementById('upload-form').addEventListener('submit', async function
         const outputTokens = data.output_tokens || 0;
         
         // Display token usage
-        inputTokensSpan.textContent = inputTokens;
-        outputTokensSpan.textContent = outputTokens;
+        inputTokensSpan.textContent = inputTokens.toLocaleString();
+        outputTokensSpan.textContent = outputTokens.toLocaleString();
         
         // Calculate costs
         const inputCostUsd = (inputTokens / 1000000) * INPUT_COST_USD_PER_MILLION;
@@ -80,9 +80,20 @@ document.getElementById('upload-form').addEventListener('submit', async function
         const totalCostUsd = inputCostUsd + outputCostUsd;
         const totalCostThb = totalCostUsd * USD_TO_THB_RATE;
         
-        // Display costs with 4 decimal places for small amounts
-        costUsdSpan.textContent = totalCostUsd.toFixed(4);
-        costThbSpan.textContent = totalCostThb.toFixed(4);
+        // Format token counts with thousands separator for display
+        const formatter = new Intl.NumberFormat('en-US');
+        inputTokensSpan.textContent = formatter.format(inputTokens);
+        outputTokensSpan.textContent = formatter.format(outputTokens);
+        
+        // Display costs with appropriate precision
+        // Show more decimal places for very small amounts
+        if (totalCostUsd < 0.01) {
+            costUsdSpan.textContent = totalCostUsd.toFixed(6);
+            costThbSpan.textContent = totalCostThb.toFixed(6);
+        } else {
+            costUsdSpan.textContent = totalCostUsd.toFixed(4);
+            costThbSpan.textContent = totalCostThb.toFixed(4);
+        }
         
         resultsDiv.style.display = 'block';
 

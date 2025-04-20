@@ -153,8 +153,14 @@ def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, 
         # Add token usage and cost to the response
         parsed_response["input_tokens"] = input_tokens
         parsed_response["output_tokens"] = output_tokens
-        parsed_response["cost_usd"] = round(total_cost_usd, 6)
-        parsed_response["cost_thb"] = round(total_cost_thb, 6)
+        
+        # Use more precision for very small amounts
+        if total_cost_usd < 0.01:
+            parsed_response["cost_usd"] = round(total_cost_usd, 6)
+            parsed_response["cost_thb"] = round(total_cost_thb, 6)
+        else:
+            parsed_response["cost_usd"] = round(total_cost_usd, 4)
+            parsed_response["cost_thb"] = round(total_cost_thb, 4)
         
         # Log token usage and cost for debugging
         logger.info(f"Token usage - Input: {input_tokens}, Output: {output_tokens}")
@@ -245,8 +251,14 @@ def generate_story_from_multiple_images(base64_images: List[str], user_prompt: s
         # Add token usage and cost to the response
         parsed_response["input_tokens"] = input_tokens
         parsed_response["output_tokens"] = output_tokens
-        parsed_response["cost_usd"] = round(total_cost_usd, 6)
-        parsed_response["cost_thb"] = round(total_cost_thb, 6)
+        
+        # Use more precision for very small amounts
+        if total_cost_usd < 0.01:
+            parsed_response["cost_usd"] = round(total_cost_usd, 6)
+            parsed_response["cost_thb"] = round(total_cost_thb, 6)
+        else:
+            parsed_response["cost_usd"] = round(total_cost_usd, 4)
+            parsed_response["cost_thb"] = round(total_cost_thb, 4)
         
         # Log token usage and cost for debugging
         logger.info(f"Token usage - Input: {input_tokens}, Output: {output_tokens}")
@@ -355,8 +367,14 @@ def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -
         # Add token usage and cost to the response
         parsed_response["input_tokens"] = input_tokens
         parsed_response["output_tokens"] = output_tokens
-        parsed_response["cost_usd"] = round(total_cost_usd, 6)
-        parsed_response["cost_thb"] = round(total_cost_thb, 6)
+        
+        # Use more precision for very small amounts
+        if total_cost_usd < 0.01:
+            parsed_response["cost_usd"] = round(total_cost_usd, 6)
+            parsed_response["cost_thb"] = round(total_cost_thb, 6)
+        else:
+            parsed_response["cost_usd"] = round(total_cost_usd, 4)
+            parsed_response["cost_thb"] = round(total_cost_thb, 4)
         
         # Log token usage and cost for debugging
         logger.info(f"Token usage from video metadata - Input: {input_tokens}, Output: {output_tokens}")
