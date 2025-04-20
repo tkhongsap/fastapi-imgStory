@@ -109,8 +109,17 @@ def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, 
         )
         
         # Extract token usage information
-        input_tokens = getattr(response, "input_tokens", 0)
-        output_tokens = getattr(response, "output_tokens", 0)
+        # Token usage is stored in usage field in newer versions of the API
+        input_tokens = 0
+        output_tokens = 0
+        
+        if hasattr(response, "usage") and response.usage:
+            input_tokens = getattr(response.usage, "input_tokens", 0)
+            output_tokens = getattr(response.usage, "output_tokens", 0)
+        else:
+            # Fallback to direct attributes (older API versions)
+            input_tokens = getattr(response, "input_tokens", 0)
+            output_tokens = getattr(response, "output_tokens", 0)
         
         # Parse the text response
         parsed_response = {}
@@ -133,6 +142,9 @@ def generate_story_from_image(base64_image: str, user_prompt: str) -> Dict[str, 
         # Add token usage to the response
         parsed_response["input_tokens"] = input_tokens
         parsed_response["output_tokens"] = output_tokens
+        
+        # Log token usage for debugging
+        logger.info(f"Token usage - Input: {input_tokens}, Output: {output_tokens}")
         
         return parsed_response
     except Exception as e:
@@ -177,8 +189,17 @@ def generate_story_from_multiple_images(base64_images: List[str], user_prompt: s
         )
         
         # Extract token usage information
-        input_tokens = getattr(response, "input_tokens", 0)
-        output_tokens = getattr(response, "output_tokens", 0)
+        # Token usage is stored in usage field in newer versions of the API
+        input_tokens = 0
+        output_tokens = 0
+        
+        if hasattr(response, "usage") and response.usage:
+            input_tokens = getattr(response.usage, "input_tokens", 0)
+            output_tokens = getattr(response.usage, "output_tokens", 0)
+        else:
+            # Fallback to direct attributes (older API versions)
+            input_tokens = getattr(response, "input_tokens", 0)
+            output_tokens = getattr(response, "output_tokens", 0)
         
         # Parse the text response
         parsed_response = {}
@@ -200,6 +221,9 @@ def generate_story_from_multiple_images(base64_images: List[str], user_prompt: s
         parsed_response["input_tokens"] = input_tokens
         parsed_response["output_tokens"] = output_tokens
         
+        # Log token usage for debugging
+        logger.info(f"Token usage - Input: {input_tokens}, Output: {output_tokens}")
+        
         return parsed_response
     except Exception as e:
         logger.error(f"Error in generate_story_from_multiple_images (Responses API): {e}")
@@ -215,11 +239,14 @@ def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -
         user_prompt: Optional user prompt to guide the story generation
         
     Returns:
-        Dict with 'english', 'thai', 'input_tokens', and 'output_tokens' fields (or fallback story)
+        Dict with 'english', 'thai', 'input_tokens', and 'output_tokens' fields
     """
     import os  # Import here to avoid circular imports
     
-    logger.info("Falling back to metadata-based video analysis")
+    logger.info("Generating story from video metadata")
+    
+    if openai_client.get_client() is None:
+        raise RuntimeError("OpenAI client not initialized")
     
     # Prepare metadata description
     filename = video_details.get('filename', 'Unknown file')
@@ -244,14 +271,63 @@ def generate_story_from_video(video_details: Dict[str, Any], user_prompt: str) -
     if file_ext:
         metadata_description += f"The video format is {file_ext}. "
     
-    if user_prompt:
-        metadata_description += f"User prompt: {user_prompt}"
+    # Create a prompt with the metadata description
+    prompt = (
+        f"Create an engaging caption for a video with these details:\n{metadata_description}\n"
+        f"User prompt: {user_prompt}" if user_prompt else metadata_description
+    )
+    
+    try:
+        # Make an actual API call using text only (since we don't have frames)
+        response = openai_client.get_client().responses.create(
+            model=openai_client.get_active_model(),
+            input=[{"role": "user", "content": [{"type": "input_text", "text": prompt}]}],
+            instructions=STORY_GENERATION_PROMPT
+        )
         
-    # For fallback, we'll use a simple return with placeholder values for token usage
-    # In a real implementation, this would call the OpenAI API with the metadata as text
-    return {
-        "english": f"Video analysis: {metadata_description}",
-        "thai": f"การวิเคราะห์วิดีโอ: {metadata_description}",
-        "input_tokens": 0,  # Placeholder since we're not making an actual API call
-        "output_tokens": 0  # Placeholder since we're not making an actual API call
-    } 
+        # Extract token usage information
+        input_tokens = 0
+        output_tokens = 0
+        
+        if hasattr(response, "usage") and response.usage:
+            input_tokens = getattr(response.usage, "input_tokens", 0)
+            output_tokens = getattr(response.usage, "output_tokens", 0)
+        else:
+            # Fallback to direct attributes (older API versions)
+            input_tokens = getattr(response, "input_tokens", 0)
+            output_tokens = getattr(response, "output_tokens", 0)
+        
+        # Parse the text response
+        parsed_response = {}
+        
+        if hasattr(response, "output_text") and response.output_text:
+            parsed_response = parse_openai_response(response.output_text)
+        else:
+            for block in response.output:
+                for content in getattr(block, "content", []):
+                    if getattr(content, "type", None) == "output_text":
+                        parsed_response = parse_openai_response(getattr(content, "text", ""))
+                        break
+                if parsed_response:
+                    break
+            if not parsed_response:
+                raise ValueError("No output_text found in OpenAI response")
+        
+        # Add token usage to the response
+        parsed_response["input_tokens"] = input_tokens
+        parsed_response["output_tokens"] = output_tokens
+        
+        # Log token usage for debugging
+        logger.info(f"Token usage from video metadata - Input: {input_tokens}, Output: {output_tokens}")
+        
+        return parsed_response
+        
+    except Exception as e:
+        logger.error(f"Error generating story from video metadata: {e}")
+        # Return a fallback response with placeholder token values
+        return {
+            "english": f"Video analysis: {metadata_description}",
+            "thai": f"การวิเคราะห์วิดีโอ: {metadata_description}",
+            "input_tokens": 0,  # Placeholder for error case
+            "output_tokens": 0  # Placeholder for error case
+        } 

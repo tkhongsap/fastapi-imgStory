@@ -332,6 +332,10 @@ def analyze_frames(frame_images: List[str], video_details: Dict[str, Any], user_
         story_result = generate_story_from_multiple_images(frame_images, 
             user_prompt or "Create an engaging caption that captures what's happening in this video")
         
+        # Log the token usage for debugging
+        logger.info(f"Token usage for frame analysis - Input: {story_result.get('input_tokens', 0)}, "
+                    f"Output: {story_result.get('output_tokens', 0)}")
+        
         # Combine video details with the story result
         result = video_details.copy()
         result.update(story_result)
@@ -340,6 +344,11 @@ def analyze_frames(frame_images: List[str], video_details: Dict[str, Any], user_
         logger.error(f"Error in analyze_frames function: {e}")
         # Fall back to metadata-only analysis if frame analysis fails
         fallback_result = generate_story_from_video(video_details, user_prompt)
+        
+        # Log the fallback token usage for debugging
+        logger.info(f"Fallback token usage - Input: {fallback_result.get('input_tokens', 0)}, "
+                    f"Output: {fallback_result.get('output_tokens', 0)}")
+        
         result = video_details.copy()
         result.update(fallback_result)
         return result 
