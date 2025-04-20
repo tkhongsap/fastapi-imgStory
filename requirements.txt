@@ -5,3 +5,6 @@ openai
 requests
 python-multipart
 aiofiles 
+ffmpeg
+numpy
+opencv-python
